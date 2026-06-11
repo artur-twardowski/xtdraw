@@ -25,20 +25,14 @@ void signal_handler(int) {
 }
 
 /**
- * Handle keyboard input
+ * Process and display keyboard input
  */
-void handle_input() {
-    unsigned char ch;
-    ssize_t bytes_read = read(STDIN_FILENO, &ch, 1);
-
-    if (bytes_read == -1) {
-        perror("read");
+void process_input(const std::string& sequence) {
+    if (sequence.empty()) {
         return;
     }
 
-    if (bytes_read == 0) {
-        return; // No input available
-    }
+    unsigned char ch = sequence[0];
 
     // Handle special keys and printable characters
     if (ch == 'q' || ch == 'Q') {
@@ -47,25 +41,20 @@ void handle_input() {
         exit(0);
     } else if (ch == '\033') {
         // Escape sequence (arrow keys, function keys, etc.)
-        unsigned char seq[2];
-        if (read(STDIN_FILENO, &seq[0], 1) > 0) {
-            if (seq[0] == '[') {
-                if (read(STDIN_FILENO, &seq[1], 1) > 0) {
-                    switch (seq[1]) {
-                        case 'A':
-                            std::cout << "UP arrow pressed\n" << std::flush;
-                            break;
-                        case 'B':
-                            std::cout << "DOWN arrow pressed\n" << std::flush;
-                            break;
-                        case 'C':
-                            std::cout << "RIGHT arrow pressed\n" << std::flush;
-                            break;
-                        case 'D':
-                            std::cout << "LEFT arrow pressed\n" << std::flush;
-                            break;
-                    }
-                }
+        if (sequence.length() >= 3 && sequence[1] == '[') {
+            switch (sequence[2]) {
+                case 'A':
+                    std::cout << "UP arrow pressed\n" << std::flush;
+                    break;
+                case 'B':
+                    std::cout << "DOWN arrow pressed\n" << std::flush;
+                    break;
+                case 'C':
+                    std::cout << "RIGHT arrow pressed\n" << std::flush;
+                    break;
+                case 'D':
+                    std::cout << "LEFT arrow pressed\n" << std::flush;
+                    break;
             }
         }
     } else if (ch == '\n' || ch == '\r') {
@@ -96,7 +85,8 @@ void event_loop(TerminalIO& terminal_io) {
              << std::flush;
 
     while (true) {
-        handle_input();
+        std::string key_sequence = terminal_io.ReadKeySequence();
+        process_input(key_sequence);
         usleep(10000); // Small delay to prevent busy-waiting (10ms)
     }
 }

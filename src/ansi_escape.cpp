@@ -38,6 +38,38 @@ void TerminalIO::RestoreTerminal() {
     }
 }
 
+std::string TerminalIO::ReadKeySequence() {
+    unsigned char ch;
+    ssize_t bytes_read = read(STDIN_FILENO, &ch, 1);
+
+    if (bytes_read == -1) {
+        perror("read");
+        return "";
+    }
+
+    if (bytes_read == 0) {
+        return ""; // No input available
+    }
+
+    std::string sequence;
+    sequence += ch;
+
+    // Handle escape sequences (arrow keys, function keys, etc.)
+    if (ch == ESC) {
+        unsigned char seq[2];
+        if (read(STDIN_FILENO, &seq[0], 1) > 0) {
+            sequence += seq[0];
+            if (seq[0] == '[') {
+                if (read(STDIN_FILENO, &seq[1], 1) > 0) {
+                    sequence += seq[1];
+                }
+            }
+        }
+    }
+
+    return sequence;
+}
+
 void TerminalIO::ClearScreen() {
     // Clear entire screen and move cursor to home (0,0)
     out_stream << ESC << "[2J" << ESC << "[H" << std::flush;

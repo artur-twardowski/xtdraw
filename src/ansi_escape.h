@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <termios.h>
+#include <string>
 
 class TerminalIO {
 public:
@@ -13,6 +14,9 @@ public:
     
     // Restore terminal to original state
     void RestoreTerminal();
+    
+    // Read keyboard input and return complete sequence as string
+    std::string ReadKeySequence();
     
     // ANSI escape sequence operations
     void ClearScreen();
