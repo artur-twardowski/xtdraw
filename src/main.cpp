@@ -4,6 +4,7 @@
 #include <cstring>
 #include <cstdlib>
 #include <signal.h>
+#include "ansi_escape.h"
 
 // Global variables for terminal state restoration
 termios original_termios;
@@ -24,8 +25,7 @@ void restore_terminal() {
  */
 void cleanup() {
     restore_terminal();
-    std::cout << "\033[?25h"; // Show cursor
-    std::cout.flush();
+    AnsiEscape::show_cursor();
 }
 
 /**
@@ -71,22 +71,6 @@ bool enable_raw_mode() {
 
     raw_mode_enabled = true;
     return true;
-}
-
-/**
- * Clear the screen using ANSI escape codes
- */
-void clear_screen() {
-    std::cout << "\033[2J"      // Clear entire screen
-             << "\033[H"        // Move cursor to home (0,0)
-             << std::flush;
-}
-
-/**
- * Set cursor position
- */
-void set_cursor_position(int row, int col) {
-    std::cout << "\033[" << row << ";" << col << "H" << std::flush;
 }
 
 /**
@@ -155,7 +139,7 @@ void handle_input() {
  */
 void event_loop() {
     std::cout << "Raw Mode Terminal Application\n"
-             << "============================\n"
+             << "============================""\n"
              << "Press 'q' to quit.\n"
              << "Try pressing arrow keys, letters, etc.\n"
              << std::flush;
@@ -174,11 +158,10 @@ int main() {
     }
 
     // Clear the screen
-    clear_screen();
+    AnsiEscape::clear_screen();
 
     // Run the event loop
     event_loop();
 
     return 0;
 }
- 
