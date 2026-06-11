@@ -147,7 +147,7 @@ void handle_input() {
  */
 void event_loop() {
     std::cout << "Raw Mode Terminal Application\n"
-             << "============================\n"
+             << "============================""\n"
              << "Press 'q' to quit.\n"
              << "Try pressing arrow keys, letters, etc.\n"
              << std::flush;
@@ -174,4 +174,3 @@ int main() {
 
     return 0;
 }
- 
