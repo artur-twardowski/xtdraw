@@ -3,47 +3,18 @@
 
 #include <iostream>
 
-/**
- * Utility class for ANSI escape code operations
- * Encapsulates all terminal control sequences used for cursor positioning,
- * screen clearing, and cursor visibility.
- */
+#include <iostream>
+
 class AnsiEscape {
 public:
-    /**
-     * Clear the entire screen and move cursor to home position (0,0)
-     */
-    static void clear_screen();
-
-    /**
-     * Set cursor position to specified row and column
-     * @param row Row number (1-based)
-     * @param col Column number (1-based)
-     */
-    static void set_cursor_position(int row, int col);
-
-    /**
-     * Show the cursor
-     */
-    static void show_cursor();
-
-    /**
-     * Hide the cursor
-     */
-    static void hide_cursor();
+    explicit AnsiEscape(std::ostream &os) : out_stream(os) {}
+    void ClearScreen();
+    void SetCursorPosition(int row, int col);
+    void ShowCursor();
+    void HideCursor();
 
 private:
-    // ANSI escape character
-    static constexpr const char* ESC = "\033";
-
-    // Private constructor to prevent instantiation
-    AnsiEscape() = default;
-
-    /**
-     * Write ANSI escape sequence to stdout and flush
-     * @param sequence The complete ANSI sequence
-     */
-    static void write_escape_sequence(const char* sequence);
+    std::ostream &out_stream;
 };
 
 #endif // ANSI_ESCAPE_H

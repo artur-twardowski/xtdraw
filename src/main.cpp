@@ -9,6 +9,7 @@
 // Global variables for terminal state restoration
 termios original_termios;
 bool raw_mode_enabled = false;
+AnsiEscape ansi{std::cout};
 
 /**
  * Restore terminal to original state
@@ -25,7 +26,7 @@ void restore_terminal() {
  */
 void cleanup() {
     restore_terminal();
-    AnsiEscape::show_cursor();
+    ansi.ShowCursor();
 }
 
 /**
@@ -71,6 +72,13 @@ bool enable_raw_mode() {
 
     raw_mode_enabled = true;
     return true;
+}
+
+/**
+ * Set cursor position
+ */
+void set_cursor_position(int row, int col) {
+    std::cout << "\033[" << row << ";" << col << "H" << std::flush;
 }
 
 /**
@@ -150,6 +158,7 @@ void event_loop() {
     }
 }
 
+
 int main() {
     // Enable raw mode
     if (!enable_raw_mode()) {
@@ -158,7 +167,7 @@ int main() {
     }
 
     // Clear the screen
-    AnsiEscape::clear_screen();
+    ansi.ClearScreen();
 
     // Run the event loop
     event_loop();
