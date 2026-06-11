@@ -4,10 +4,12 @@
 #include <cstring>
 #include <cstdlib>
 #include <signal.h>
+#include "ansi_escape.h"
 
 // Global variables for terminal state restoration
 termios original_termios;
 bool raw_mode_enabled = false;
+AnsiEscape ansi{std::cout};
 
 /**
  * Restore terminal to original state
@@ -24,8 +26,7 @@ void restore_terminal() {
  */
 void cleanup() {
     restore_terminal();
-    std::cout << "\033[?25h"; // Show cursor
-    std::cout.flush();
+    ansi.ShowCursor();
 }
 
 /**
@@ -71,15 +72,6 @@ bool enable_raw_mode() {
 
     raw_mode_enabled = true;
     return true;
-}
-
-/**
- * Clear the screen using ANSI escape codes
- */
-void clear_screen() {
-    std::cout << "\033[2J"      // Clear entire screen
-             << "\033[H"        // Move cursor to home (0,0)
-             << std::flush;
 }
 
 /**
@@ -166,6 +158,7 @@ void event_loop() {
     }
 }
 
+
 int main() {
     // Enable raw mode
     if (!enable_raw_mode()) {
@@ -174,7 +167,7 @@ int main() {
     }
 
     // Clear the screen
-    clear_screen();
+    ansi.ClearScreen();
 
     // Run the event loop
     event_loop();

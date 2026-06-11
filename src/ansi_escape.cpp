@@ -1,22 +1,20 @@
 #include "ansi_escape.h"
 
-void AnsiEscape::write_escape_sequence(const char* sequence) {
-    std::cout << sequence << std::flush;
-}
+static constexpr const char ESC = '\033';
 
-void AnsiEscape::clear_screen() {
+void AnsiEscape::ClearScreen() {
     // Clear entire screen and move cursor to home (0,0)
-    write_escape_sequence(ESC "[2J" ESC "[H");
+    out_stream << ESC << "[2J" << ESC << "[H" << std::flush;
 }
 
-void AnsiEscape::set_cursor_position(int row, int col) {
-    std::cout << ESC "[" << row << ";" << col << "H" << std::flush;
+void AnsiEscape::SetCursorPosition(int row, int col) {
+    out_stream << ESC << row << ";" << col << "H" << std::flush;
 }
 
-void AnsiEscape::show_cursor() {
-    write_escape_sequence(ESC "[?25h");
+void AnsiEscape::ShowCursor() {
+    out_stream << ESC << "[?25h" << std::flush;
 }
 
-void AnsiEscape::hide_cursor() {
-    write_escape_sequence(ESC "[?25l");
+void AnsiEscape::HideCursor() {
+    out_stream << ESC << "[?25l" << std::flush;
 }
