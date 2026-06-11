@@ -33,6 +33,9 @@ public:
     static void hide_cursor();
 
 private:
+    // ANSI escape character
+    static constexpr const char* ESC = "\033";
+
     // Private constructor to prevent instantiation
     AnsiEscape() = default;
 
