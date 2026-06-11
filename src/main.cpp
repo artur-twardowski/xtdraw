@@ -1,32 +1,19 @@
 #include <iostream>
-#include <termios.h>
 #include <unistd.h>
-#include <cstring>
-#include <cstdlib>
 #include <signal.h>
 #include "ansi_escape.h"
 
-// Global variables for terminal state restoration
-termios original_termios;
-bool raw_mode_enabled = false;
-AnsiEscape ansi{std::cout};
-
-/**
- * Restore terminal to original state
- */
-void restore_terminal() {
-    if (raw_mode_enabled) {
-        tcsetattr(STDIN_FILENO, TCSAFLUSH, &original_termios);
-        raw_mode_enabled = false;
-    }
-}
+// Global TerminalIO instance
+TerminalIO* g_terminal_io = nullptr;
 
 /**
  * Handle cleanup on exit
  */
 void cleanup() {
-    restore_terminal();
-    ansi.ShowCursor();
+    if (g_terminal_io) {
+        g_terminal_io->ShowCursor();
+        g_terminal_io->RestoreTerminal();
+    }
 }
 
 /**
@@ -35,50 +22,6 @@ void cleanup() {
 void signal_handler(int) {
     cleanup();
     exit(0);
-}
-
-/**
- * Enable raw mode for terminal
- */
-bool enable_raw_mode() {
-    if (tcgetattr(STDIN_FILENO, &original_termios) == -1) {
-        perror("tcgetattr");
-        return false;
-    }
-
-    // Register cleanup function to be called on exit
-    atexit(cleanup);
-
-    // Register signal handlers for graceful cleanup
-    signal(SIGINT, signal_handler);
-    signal(SIGTERM, signal_handler);
-
-    termios raw = original_termios;
-
-    // Disable canonical mode and echo
-    raw.c_lflag &= ~(ICANON | ECHO);
-
-    // Set minimum characters to read and timeout
-    raw.c_cc[VMIN] = 0;   // Non-blocking read
-    raw.c_cc[VTIME] = 0;  // No timeout
-
-    // Disable output processing
-    raw.c_oflag &= ~(OPOST);
-
-    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1) {
-        perror("tcsetattr");
-        return false;
-    }
-
-    raw_mode_enabled = true;
-    return true;
-}
-
-/**
- * Set cursor position
- */
-void set_cursor_position(int row, int col) {
-    std::cout << "\033[" << row << ";" << col << "H" << std::flush;
 }
 
 /**
@@ -145,7 +88,7 @@ void handle_input() {
 /**
  * Main event loop
  */
-void event_loop() {
+void event_loop(TerminalIO& terminal_io) {
     std::cout << "Raw Mode Terminal Application\n"
              << "============================""\n"
              << "Press 'q' to quit.\n"
@@ -160,17 +103,28 @@ void event_loop() {
 
 
 int main() {
+    // Create TerminalIO instance
+    TerminalIO terminal_io(std::cout);
+    g_terminal_io = &terminal_io;
+
     // Enable raw mode
-    if (!enable_raw_mode()) {
+    if (!terminal_io.EnableRawMode()) {
         std::cerr << "Failed to enable raw mode\n";
         return 1;
     }
 
+    // Register cleanup function to be called on exit
+    atexit(cleanup);
+
+    // Register signal handlers for graceful cleanup
+    signal(SIGINT, signal_handler);
+    signal(SIGTERM, signal_handler);
+
     // Clear the screen
-    ansi.ClearScreen();
+    terminal_io.ClearScreen();
 
     // Run the event loop
-    event_loop();
+    event_loop(terminal_io);
 
     return 0;
 }
