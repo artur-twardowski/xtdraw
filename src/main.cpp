@@ -2,6 +2,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include "terminal_io.h"
+#include <iomanip>
 
 // Global TerminalIO instance
 TerminalIO* g_terminal_io = nullptr;
@@ -27,27 +28,14 @@ void OnSignal(int) {
 /**
  * Process and display keyboard input
  */
-void ProcessInput(const std::string& sequence) {
-    if (sequence.empty()) {
-        return;
-    }
-
-    unsigned char ch = sequence[0];
-
+void ProcessInput(uint32_t seq) {
     // Handle special keys and printable characters
-    if (ch == 'q' || ch == 'Q') {
+    if (seq == 'q' || seq == 'Q') {
         // Exit the application
         OnClose();
         exit(0);
-    } else {
-        for (unsigned char ch: sequence) {
-            if (ch < 32 || ch >= 127) {
-                std::cout << "<" << std::hex << (int)ch << ">";
-            } else {
-                std::cout << ch;
-            }
-        }
-        std::cout.flush();
+    } else if (seq != 0) {
+        std::cout << KeyCodeToString(seq) << std::flush;
     }
 }
 
@@ -56,8 +44,7 @@ void ProcessInput(const std::string& sequence) {
  */
 void event_loop(TerminalIO& terminal_io) {
     while (true) {
-        std::string key_sequence = terminal_io.ReadKeySequence();
-        ProcessInput(key_sequence);
+        ProcessInput(terminal_io.ReadKey());
         usleep(10000); // Small delay to prevent busy-waiting (10ms)
     }
 }

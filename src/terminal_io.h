@@ -4,6 +4,9 @@
 #include <iostream>
 #include <termios.h>
 #include <string>
+#include <stdint.h>
+
+std::string KeyCodeToString(uint32_t keycode, char special_delim_left = '<', char special_delim_right = '>');
 
 class TerminalIO {
 public:
@@ -16,7 +19,7 @@ public:
     void RestoreTerminal();
     
     // Read keyboard input and return complete sequence as string
-    std::string ReadKeySequence();
+    uint32_t ReadKey();
     
     // ANSI escape sequence operations
     void ClearScreen();
@@ -28,6 +31,7 @@ public:
     ~TerminalIO();
 
 private:
+    uint32_t ReadUTF8(uint8_t first);
     std::ostream &out_stream;
     termios original_termios{};
     bool raw_mode_enabled = false;
