@@ -8,7 +8,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Werror")
 
 set(XTDRAW_SOURCES
     src/main.cpp
-    src/ansi_escape.cpp)
+    src/terminal_io.cpp)
 
 # Create executable
 add_executable(${CMAKE_PROJECT_NAME} ${XTDRAW_SOURCES})
