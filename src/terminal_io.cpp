@@ -56,14 +56,48 @@ std::string TerminalIO::ReadKeySequence() {
 
     // Handle escape sequences (arrow keys, function keys, etc.)
     if (ch == ESC) {
-        unsigned char seq[2];
-        if (read(STDIN_FILENO, &seq[0], 1) > 0) {
-            sequence += seq[0];
-            if (seq[0] == '[') {
-                if (read(STDIN_FILENO, &seq[1], 1) > 0) {
-                    sequence += seq[1];
+        unsigned char next_ch;
+        
+        // Read the next character to determine sequence type
+        if (read(STDIN_FILENO, &next_ch, 1) > 0) {
+            sequence += next_ch;
+            
+            // Standard CSI (Control Sequence Introducer) sequences: ESC [
+            if (next_ch == '[') {
+                unsigned char seq_ch;
+                
+                // Read parameter bytes and intermediate bytes (0x30-0x3F and 0x20-0x2F)
+                while (read(STDIN_FILENO, &seq_ch, 1) > 0) {
+                    sequence += seq_ch;
+                    
+                    // Check if this is a final byte (0x40-0x7E)
+                    // Common final bytes: A-Z (cursor movement), ~ (function keys), m (color), etc.
+                    if (seq_ch >= 0x40 && seq_ch <= 0x7E) {
+                        break;
+                    }
+                    
+                    // Limit sequence length to prevent infinite loops
+                    if (sequence.length() > 16) {
+                        break;
+                    }
                 }
             }
+            // SS2 sequences: ESC N (single shift, rarely used)
+            else if (next_ch == 'N') {
+                unsigned char seq_ch;
+                if (read(STDIN_FILENO, &seq_ch, 1) > 0) {
+                    sequence += seq_ch;
+                }
+            }
+            // SS3 sequences: ESC O (used by some terminals for function keys)
+            else if (next_ch == 'O') {
+                unsigned char seq_ch;
+                if (read(STDIN_FILENO, &seq_ch, 1) > 0) {
+                    sequence += seq_ch;
+                }
+            }
+            // Other escape sequences (ESC followed by single character)
+            // These are complete as-is
         }
     }
 
