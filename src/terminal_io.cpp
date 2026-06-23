@@ -7,6 +7,35 @@
 
 static constexpr const char ESC = '\033';
 
+static constexpr uint8_t ExtractBits(uint32_t in, uint8_t lsb, uint8_t count) {
+    const uint32_t mask = ((1 << count) - 1) << lsb;
+    return (in & mask) >> lsb;
+}
+
+static std::string EncodeUTF8(uint32_t keycode) {
+    char result[5];
+    if (keycode <= 0x7F) {
+        result[0] = ExtractBits(keycode, 0, 7);
+        result[1] = '\0';
+    } else if (keycode <= 0x7FF) {
+        result[0] = 0b11000000 | ExtractBits(keycode, 6, 5);
+        result[1] = 0b10000000 | ExtractBits(keycode, 0, 6);
+        result[2] = '\0';
+    } else if (keycode <= 0xFFFF) {
+        result[0] = 0b11100000 | ExtractBits(keycode, 12, 4);
+        result[1] = 0b10000000 | ExtractBits(keycode, 6, 6);
+        result[2] = 0b10000000 | ExtractBits(keycode, 0, 6);
+        result[3] = '\0';
+    } else if (keycode <= 0x10FFFF) {
+        result[0] = 0b11110000 | ExtractBits(keycode, 18, 3);
+        result[1] = 0b10000000 | ExtractBits(keycode, 12, 6);
+        result[2] = 0b10000000 | ExtractBits(keycode, 6, 6);
+        result[3] = 0b10000000 | ExtractBits(keycode, 0, 6);
+        result[4] = '\0';
+    }
+    return result;
+}
+
 bool TerminalIO::EnableRawMode() {
     if (tcgetattr(STDIN_FILENO, &original_termios) == -1) {
         perror("tcgetattr");
@@ -149,7 +178,7 @@ void TerminalIO::ClearScreen() {
 }
 
 void TerminalIO::SetCursorPosition(int row, int col) {
-    out_stream << ESC << "[" << row << ";" << col << "H" << std::flush;
+    out_stream << ESC << "[" << (row + 1) << ";" << (col+1) << "H" << std::flush;
 }
 
 void TerminalIO::ShowCursor() {
@@ -158,6 +187,33 @@ void TerminalIO::ShowCursor() {
 
 void TerminalIO::HideCursor() {
     out_stream << ESC << "[?25l" << std::flush;
+}
+
+void TerminalIO::Write(const std::string &data) {
+    out_stream << data;
+}
+void TerminalIO::Write(uint32_t character) {
+    out_stream << EncodeUTF8(character);
+}
+void TerminalIO::Flush() {
+    out_stream.flush();
+}
+
+void TerminalIO::SetColor(std::optional<uint8_t> bg, std::optional<uint8_t> fg) {
+    if (!fg.has_value() && !bg.has_value()) {
+        return;
+    }
+    out_stream << ESC << "[";
+    if (bg.has_value()) {
+        out_stream << "48;5;" << (int)*bg;
+    }
+    if (fg.has_value()) {
+        if (bg.has_value()) {
+            out_stream << ";";
+        }
+        out_stream << "38;5;" << (int)*fg;
+    }
+    out_stream << "m";
 }
 
 TerminalIO::~TerminalIO() {
@@ -204,35 +260,6 @@ static const std::map<uint32_t, std::string> SPECIAL_KEYCODES {
     {0x400007d3, "Del"},
 };
 
-static constexpr uint8_t ExtractBits(uint32_t in, uint8_t lsb, uint8_t count) {
-    const uint32_t mask = ((1 << count) - 1) << lsb;
-    return (in & mask) >> lsb;
-
-}
-
-static std::string EncodeUTF8(uint32_t keycode) {
-    char result[5];
-    if (keycode <= 0x7F) {
-        result[0] = ExtractBits(keycode, 0, 7);
-        result[1] = '\0';
-    } else if (keycode <= 0x7FF) {
-        result[0] = 0b11000000 | ExtractBits(keycode, 6, 5);
-        result[1] = 0b10000000 | ExtractBits(keycode, 0, 6);
-        result[2] = '\0';
-    } else if (keycode <= 0xFFFF) {
-        result[0] = 0b11100000 | ExtractBits(keycode, 12, 4);
-        result[1] = 0b10000000 | ExtractBits(keycode, 6, 6);
-        result[2] = 0b10000000 | ExtractBits(keycode, 0, 6);
-        result[3] = '\0';
-    } else if (keycode <= 0x10FFFF) {
-        result[0] = 0b11110000 | ExtractBits(keycode, 18, 3);
-        result[1] = 0b10000000 | ExtractBits(keycode, 12, 6);
-        result[2] = 0b10000000 | ExtractBits(keycode, 6, 6);
-        result[3] = 0b10000000 | ExtractBits(keycode, 0, 6);
-        result[4] = '\0';
-    }
-    return result;
-}
 
 std::string KeyCodeToString(uint32_t keycode, char special_delim_left, char special_delim_right) {
     auto it = SPECIAL_KEYCODES.find(keycode);
