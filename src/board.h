@@ -44,7 +44,7 @@ public:
      */
     void Render(TerminalIO& terminal_io);
 
-    void RenderCursor(TerminalIO &terminal_io, bool show_cursor);
+    void RenderCursor(TerminalIO &terminal_io, bool show_placeholder);
 
     /**
      * Get board dimensions

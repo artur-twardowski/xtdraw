@@ -64,15 +64,23 @@ void ProcessInput(uint32_t seq) {
  * Main event loop
  */
 void event_loop(TerminalIO& terminal_io) {
-    static uint32_t t = 0;
+    static uint32_t draw_frame = 0;
     while (true) {
-        t++;
+        draw_frame++;
+        if (draw_frame == 64) {
+            draw_frame = 0;
+        }
 
         if (redraw) {
             g_board->Render(terminal_io);
+        }
+
+        if (redraw || draw_frame % 16 == 0) {
+            g_board->RenderCursor(terminal_io, draw_frame > 0);
+        }
+        if (redraw) {
             redraw = false;
         }
-        g_board->RenderCursor(terminal_io, t & 0x10);
         ProcessInput(terminal_io.ReadKey());
         usleep(10000); // Small delay to prevent busy-waiting (10ms)
     }

@@ -83,17 +83,15 @@ void Board::Render(TerminalIO &terminal_io) {
     }
 }
 
-void Board::RenderCursor(TerminalIO &terminal_io, bool show_cursor) {
+void Board::RenderCursor(TerminalIO &terminal_io, bool show_placeholder) {
+
     const auto &cell = GetCell(cursor_y, cursor_x);
     terminal_io.SetCursorPosition(cursor_y, cursor_x);
-    terminal_io.SetColor(cell.background_color, cell.foreground_color);
-    if (show_cursor) {
-        if (cell.character == ' ') {
-            terminal_io.Write('O');
-        } else {
-            terminal_io.Write(' ');
-        }
+    if (show_placeholder) {
+        terminal_io.SetColor(cell.foreground_color, cell.background_color);
+        terminal_io.Write(cell.character);
     } else {
+        terminal_io.SetColor(cell.background_color, cell.foreground_color);
         terminal_io.Write(cell.character);
     }
 }
