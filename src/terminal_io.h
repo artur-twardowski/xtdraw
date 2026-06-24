@@ -28,7 +28,7 @@ public:
     
     // ANSI escape sequence operations
     void ClearScreen();
-    void SetCursorPosition(int row, int col);
+    void SetCursorPosition(int col, int row);
     void ShowCursor();
     void HideCursor();
     void SetColor(std::optional<uint8_t> bg, std::optional<uint8_t> fg);

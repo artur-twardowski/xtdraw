@@ -91,7 +91,7 @@ void Board::Render(TerminalIO &terminal_io) {
     uint32_t rows = window.height - 2;
     uint32_t cols = window.width - 2;
 
-    terminal_io.SetCursorPosition(window.top, window.left);
+    terminal_io.SetCursorPosition(window.left, window.top);
     terminal_io.SetColor(border_bg, border_fg);
     terminal_io.Write(kLeftTopCorner);
     for (size_t x = 0; x < cols; x++) {
@@ -101,7 +101,7 @@ void Board::Render(TerminalIO &terminal_io) {
 
     for (uint32_t y = 0; y < rows; y++) {
         uint8_t last_fg = border_fg, last_bg = border_bg;
-        terminal_io.SetCursorPosition(window.top + y + 1, window.left);
+        terminal_io.SetCursorPosition(window.left, window.top + y + 1);
         terminal_io.SetColor(last_bg, last_fg);
         terminal_io.Write(kVerticalLine);
 
@@ -116,7 +116,7 @@ void Board::Render(TerminalIO &terminal_io) {
         }
         terminal_io.Write(kVerticalLine);
     }
-    terminal_io.SetCursorPosition(window.top + window.height - 1, window.left);
+    terminal_io.SetCursorPosition(window.left, window.top + window.height - 1);
     terminal_io.SetColor(border_bg, border_fg);
     terminal_io.Write(kLeftBottomCorner);
     for (size_t x = 0; x < cols; x++) {
@@ -129,8 +129,8 @@ void Board::Render(TerminalIO &terminal_io) {
 void Board::RenderCursor(TerminalIO &terminal_io, bool show_placeholder) {
     const auto &cell = GetCell(cursor_y, cursor_x);
     terminal_io.SetCursorPosition(
-            cursor_y - view_top + window.top + 1,
-            cursor_x - view_left + window.left + 1);
+            cursor_x - view_left + window.left + 1,
+            cursor_y - view_top + window.top + 1);
     if (show_placeholder) {
         terminal_io.SetColor(cell.foreground_color, cell.background_color);
         terminal_io.Write(cell.character);
