@@ -4,12 +4,30 @@
 #include <map>
 #include <sstream>
 #include <iomanip>
+#include <variant>
 
 static constexpr const char ESC = '\033';
 
 static constexpr uint8_t ExtractBits(uint32_t in, uint8_t lsb, uint8_t count) {
     const uint32_t mask = ((1 << count) - 1) << lsb;
     return (in & mask) >> lsb;
+}
+
+bool operator==(const TerminalIO::color_t &c1, const TerminalIO::color_t &c2) {
+    using rgb_t = TerminalIO::rgb_t;
+    if (std::holds_alternative<uint8_t>(c1) && std::holds_alternative<uint8_t>(c2)) {
+        return std::get<uint8_t>(c1) == std::get<uint8_t>(c2);
+    } else if (std::holds_alternative<rgb_t>(c1) && std::holds_alternative<rgb_t>(c2)) {
+        const rgb_t &rgb1 = std::get<rgb_t>(c1);
+        const rgb_t &rgb2 = std::get<rgb_t>(c2);
+        return rgb1.r == rgb2.r && rgb1.g == rgb2.g && rgb1.b == rgb2.b;
+    } else {
+        return false;
+    }
+}
+
+bool operator!=(const TerminalIO::color_t &c1, const TerminalIO::color_t &c2) {
+    return !(c1 == c2);
 }
 
 static std::string EncodeUTF8(uint32_t keycode) {
@@ -199,19 +217,23 @@ void TerminalIO::Flush() {
     out_stream.flush();
 }
 
-void TerminalIO::SetColor(std::optional<uint8_t> bg, std::optional<uint8_t> fg) {
-    if (!fg.has_value() && !bg.has_value()) {
+void TerminalIO::SetColor(std::optional<color_t> bg, std::optional<color_t> fg) {
+    bool put_bg = (bg.has_value() && last_bg_color != *bg);
+    bool put_fg = (fg.has_value() && last_fg_color != *fg);
+    if (!put_bg && !put_fg) {
         return;
     }
     out_stream << ESC << "[";
-    if (bg.has_value()) {
-        out_stream << "48;5;" << (int)*bg;
+    if (put_bg) {
+        out_stream << "48;5;" << (int)std::get<uint8_t>(*bg);
+        last_bg_color = *bg;
     }
-    if (fg.has_value()) {
-        if (bg.has_value()) {
+    if (put_fg) {
+        if (put_bg) {
             out_stream << ";";
         }
-        out_stream << "38;5;" << (int)*fg;
+        out_stream << "38;5;" << (int)std::get<uint8_t>(*fg);
+        last_fg_color = *fg;
     }
     out_stream << "m";
 }
