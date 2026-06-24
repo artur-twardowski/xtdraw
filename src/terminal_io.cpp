@@ -177,7 +177,7 @@ void TerminalIO::ClearScreen() {
     out_stream << ESC << "[2J" << ESC << "[H" << std::flush;
 }
 
-void TerminalIO::SetCursorPosition(int row, int col) {
+void TerminalIO::SetCursorPosition(int col, int row) {
     out_stream << ESC << "[" << (row + 1) << ";" << (col+1) << "H" << std::flush;
 }
 
