@@ -16,19 +16,20 @@ struct BoardCell {
     uint8_t background_color{0}; // Background color (0-255)
 };
 
+struct BoxDimensions {
+    uint16_t left;
+    uint16_t top;
+    uint16_t width;
+    uint16_t height;
+};
+
 /**
  * Board class for managing a 2D grid of characters
  */
 class Board {
 public:
-    /**
-     * Constructor with optional custom dimensions
-     */
-    Board(uint16_t cols = 80, uint16_t rows = 25);
+    Board(const BoxDimensions &viewport, uint16_t width = 80, uint16_t height = 25);
 
-    /**
-     * Set a cell at position (row, col)
-     */
     void SetCell(uint32_t character, uint8_t bg_color = 0, uint8_t fg_color = 15);
 
     void SetCursorPosition(uint16_t x, uint16_t y);
@@ -49,8 +50,8 @@ public:
     /**
      * Get board dimensions
      */
-    uint16_t GetCols() const { return cols; }
-    uint16_t GetRows() const { return rows; }
+    uint16_t GetCols() const { return width; }
+    uint16_t GetRows() const { return height; }
 
     /**
      * Validate coordinates
@@ -58,17 +59,14 @@ public:
     bool IsValidCoord(uint16_t row, uint16_t col) const;
 
 private:
-    uint16_t cols;
-    uint16_t rows;
+    BoxDimensions window;
+    uint16_t width;
+    uint16_t height;
     uint16_t cursor_x;
     uint16_t cursor_y;
-    const uint16_t board_draw_x{20};
+    uint16_t view_left;
+    uint16_t view_top;
     std::vector<BoardCell> grid;
-
-    /**
-     * Get index from row and col
-     */
-    int GetIndex(int row, int col) const { return row * cols + col; }
 };
 
 #endif // BOARD_H

@@ -115,7 +115,7 @@ void event_loop(TerminalIO& terminal_io) {
 int main() {
     // Create TerminalIO instance
     TerminalIO terminal_io(std::cout);
-    Board board;
+    Board board({20, 2, 80, 16}, 120, 60);
     g_terminal_io = &terminal_io;
     g_board = &board;
 
