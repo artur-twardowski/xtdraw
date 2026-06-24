@@ -63,11 +63,28 @@ const BoardCell& Board::GetCell(uint16_t row, uint16_t col) const {
 }
 
 void Board::Render(TerminalIO &terminal_io) {
+    static const uint32_t kLeftTopCorner = 0x256d;
+    static const uint32_t kRightTopCorner = 0x256e;
+    static const uint32_t kLeftBottomCorner = 0x2570;
+    static const uint32_t kRightBottomCorner = 0x256f;
+    static const uint32_t kHorizontalLine = 0x2500;
+    static const uint32_t kVerticalLine = 0x2502;
+    const uint8_t border_bg = 16;
+    const uint8_t border_fg = 255;
     const auto *cell = grid.data();
+    terminal_io.SetCursorPosition(0, board_draw_x);
+    terminal_io.SetColor(border_bg, border_fg);
+    terminal_io.Write(kLeftTopCorner);
+    for (size_t x = 0; x < cols; x++) {
+        terminal_io.Write(kHorizontalLine);
+    }
+    terminal_io.Write(kRightTopCorner);
+
     for (uint32_t y = 0; y < rows; y++) {
-        uint8_t last_fg = 0, last_bg = 0;
-        terminal_io.SetCursorPosition(y, 0);
+        uint8_t last_fg = border_fg, last_bg = border_bg;
+        terminal_io.SetCursorPosition(y + 1, board_draw_x);
         terminal_io.SetColor(last_bg, last_fg);
+        terminal_io.Write(kVerticalLine);
 
         for (uint32_t x = 0; x < cols; x++) {
             if (cell->foreground_color != last_fg || cell->background_color != last_bg) {
@@ -79,14 +96,22 @@ void Board::Render(TerminalIO &terminal_io) {
             terminal_io.Write(cell->character);
             cell++;
         }
-        terminal_io.Flush();
+        terminal_io.Write(kVerticalLine);
     }
+    terminal_io.SetCursorPosition(rows + 1, board_draw_x);
+    terminal_io.SetColor(border_bg, border_fg);
+    terminal_io.Write(kLeftBottomCorner);
+    for (size_t x = 0; x < cols; x++) {
+        terminal_io.Write(kHorizontalLine);
+    }
+    terminal_io.Write(kRightBottomCorner);
+    terminal_io.Flush();
 }
 
 void Board::RenderCursor(TerminalIO &terminal_io, bool show_placeholder) {
 
     const auto &cell = GetCell(cursor_y, cursor_x);
-    terminal_io.SetCursorPosition(cursor_y, cursor_x);
+    terminal_io.SetCursorPosition(cursor_y + 1, cursor_x + board_draw_x + 1);
     if (show_placeholder) {
         terminal_io.SetColor(cell.foreground_color, cell.background_color);
         terminal_io.Write(cell.character);

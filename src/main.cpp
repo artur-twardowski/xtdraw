@@ -1,4 +1,5 @@
 #include <iostream>
+#include <map>
 #include <unistd.h>
 #include <signal.h>
 #include "terminal_io.h"
@@ -33,6 +34,27 @@ void OnSignal(int) {
  * Process and display keyboard input
  */
 void ProcessInput(uint32_t seq) {
+    static const std::map<std::string, uint32_t> kInsertChar {
+        {"0", ' '},
+        {"1", 0x250c},
+        {"2", 0x2500},
+        {"3", 0x2510},
+        {"4", 0x2502},
+        {"6", 0x2506},
+        {"7", 0x2514},
+        {"8", 0x2504},
+        {"9", 0x2518},
+
+        {"!", 0x256d},
+        {"@", 0x252c},
+        {"#", 0x256e},
+        {"$", 0x251c},
+        {"%", 0x253c},
+        {"^", 0x2524},
+        {"&", 0x2570},
+        {"*", 0x2534},
+        {"(", 0x256f},
+    };
     // Handle special keys and printable characters
     if (!seq) {
         return;
@@ -54,9 +76,12 @@ void ProcessInput(uint32_t seq) {
     } else if (seq_str == "<Right>") {
         g_board->MoveCursor(1, 0);
         redraw = true;
-    } else if (seq_str == "p") {
-        g_board->SetCell('X');
-        redraw = true;
+    } else {
+        auto it = kInsertChar.find(seq_str);
+        if (it != kInsertChar.end()) {
+            g_board->SetCell(it->second);
+            redraw = true;
+        }
     }
 }
 
@@ -67,7 +92,7 @@ void event_loop(TerminalIO& terminal_io) {
     static uint32_t draw_frame = 0;
     while (true) {
         draw_frame++;
-        if (draw_frame == 64) {
+        if (draw_frame == 32) {
             draw_frame = 0;
         }
 
@@ -82,7 +107,7 @@ void event_loop(TerminalIO& terminal_io) {
             redraw = false;
         }
         ProcessInput(terminal_io.ReadKey());
-        usleep(10000); // Small delay to prevent busy-waiting (10ms)
+        usleep(10000);
     }
 }
 

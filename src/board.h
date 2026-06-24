@@ -62,6 +62,7 @@ private:
     uint16_t rows;
     uint16_t cursor_x;
     uint16_t cursor_y;
+    const uint16_t board_draw_x{20};
     std::vector<BoardCell> grid;
 
     /**
