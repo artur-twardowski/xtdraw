@@ -5,6 +5,7 @@
 #include <termios.h>
 #include <string>
 #include <stdint.h>
+#include <optional>
 
 std::string KeyCodeToString(uint32_t keycode, char special_delim_left = '<', char special_delim_right = '>');
 
@@ -20,12 +21,17 @@ public:
     
     // Read keyboard input and return complete sequence as string
     uint32_t ReadKey();
+
+    void Write(const std::string &data);
+    void Write(uint32_t character);
+    void Flush();
     
     // ANSI escape sequence operations
     void ClearScreen();
     void SetCursorPosition(int row, int col);
     void ShowCursor();
     void HideCursor();
+    void SetColor(std::optional<uint8_t> bg, std::optional<uint8_t> fg);
     
     // Destructor to ensure cleanup
     ~TerminalIO();
