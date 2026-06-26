@@ -17,6 +17,25 @@ void Board::SetCell(uint32_t character, uint8_t bg_color, uint8_t fg_color) {
     element.foreground_color = fg_color;
 }
 
+void Board::TogglePixel() {
+    auto &element = grid[cursor_y * width + cursor_x];
+    if (cursor_mode == CursorMode::BLK_2x3) {
+        box_drawing_t box_drawing = box_drawing_t::BLK_2x3;
+        uint8_t pix;
+        if (CharacterToPixels(pix, box_drawing, element.character)) {
+            pix = pix ^ (cursor_sy * 3 + cursor_sx);
+            element.character = GetBlockDrawingCharacter(pix, box_drawing);
+        }
+    } else if (cursor_mode == CursorMode::BLK_2x2) {
+        box_drawing_t box_drawing = box_drawing_t::BLK_2x2;
+        uint8_t pix;
+        if (CharacterToPixels(pix, box_drawing, element.character)) {
+            pix = pix ^ (1 << (cursor_sy * 2 + cursor_sx));
+            element.character = GetBlockDrawingCharacter(pix, box_drawing);
+        }
+    }
+}
+
 void Board::SetCursorPosition(uint16_t x, uint16_t y) {
     if (x < width) {
         cursor_x = x;
@@ -30,43 +49,41 @@ void Board::SetCursorPosition(uint16_t x, uint16_t y) {
     }
 }
 void Board::MoveCursor(int16_t x, int16_t y) {
-    if (x > 0) {
-        if (cursor_x + x < width) {
-            cursor_x += x;
-        } else {
-            cursor_x = width - 1;
-        }
-        while (cursor_x >= view_left + window.width - 2) {
-            view_left++;
-        }
-    } else {
-        if (cursor_x >= -x) {
-            cursor_x += x;
-        } else {
-            cursor_x = 0;
-        }
-        while (cursor_x < view_left) {
-            view_left--;
-        }
+    int32_t cx = cursor_x;
+    int32_t cy = cursor_y;
+    int32_t maxx = width;
+    int32_t maxy = height;
+
+    if (cursor_mode == CursorMode::BLK_2x2) {
+        cx = cursor_x * 2 + cursor_sx;
+        cy = cursor_y * 2 + cursor_sy;
+        maxx = width * 2;
+        maxy = height * 2;
+    } else if (cursor_mode == CursorMode::BLK_2x3) {
+        cx = cursor_x * 2 + cursor_sx;
+        cy = cursor_y * 3 + cursor_sy;
+        maxx = width * 2;
+        maxy = height * 3;
     }
-    if (y > 0) {
-        if (cursor_y + y < height) {
-            cursor_y += y;
-        } else {
-            cursor_y = height - 1;
-        }
-        while (cursor_y >= view_top + window.height - 2) {
-            view_top++;
-        }
+
+    cx = std::min(std::max(0, cx + x), maxx);
+    cy = std::min(std::max(0, cy + y), maxy);
+
+    if (cursor_mode == CursorMode::BLK_2x3) {
+        cursor_x = cx / 2;
+        cursor_sx = cx % 2;
+        cursor_y = cy / 3;
+        cursor_sy = cy % 3;
+    } else if (cursor_mode == CursorMode::BLK_2x2) {
+        cursor_x = cx / 2;
+        cursor_sx = cx % 2;
+        cursor_y = cy / 2;
+        cursor_sy = cy % 2;
     } else {
-        if (cursor_y >= -y) {
-            cursor_y += y;
-        } else {
-            cursor_y = 0;
-        }
-        while (cursor_y < view_top) {
-            view_top--;
-        }
+        cursor_x = cx;
+        cursor_y = cy;
+        cursor_sx = 0;
+        cursor_sy = 0;
     }
 }
 
@@ -142,8 +159,21 @@ void Board::RenderCursor(TerminalIO &terminal_io, bool show_placeholder) {
             cursor_x - view_left + window.left + 1,
             cursor_y - view_top + window.top + 1);
     if (show_placeholder) {
-        terminal_io.SetColor(cell.foreground_color, cell.background_color);
-        terminal_io.Write(cell.character);
+        if (cursor_mode == CursorMode::ENTIRE_CHARACTER) {
+            terminal_io.SetColor(cell.foreground_color, cell.background_color);
+            terminal_io.Write(cell.character);
+        } else {
+            box_drawing_t box_drawing;
+            uint8_t pix;
+            if (CharacterToPixels(pix, box_drawing, cell.character)) {
+                pix = pix ^ (1 << (cursor_sy * 2 + cursor_sx));
+                terminal_io.SetColor(cell.background_color, cell.foreground_color);
+                terminal_io.Write(GetBlockDrawingCharacter(pix, box_drawing));
+            } else {
+                terminal_io.SetColor(cell.foreground_color, cell.background_color);
+                terminal_io.Write(cell.character);
+            }
+        }
     } else {
         terminal_io.SetColor(cell.background_color, cell.foreground_color);
         terminal_io.Write(cell.character);

@@ -28,34 +28,30 @@ struct BoxDimensions {
  */
 class Board {
 public:
+    enum struct CursorMode {
+        ENTIRE_CHARACTER,
+        BLK_2x2,
+        BLK_2x3
+    };
     Board(const BoxDimensions &viewport, uint16_t width = 80, uint16_t height = 25);
 
     void SetCell(uint32_t character, uint8_t bg_color = 0, uint8_t fg_color = 15);
+    void TogglePixel();
 
     void SetCursorPosition(uint16_t x, uint16_t y);
     void MoveCursor(int16_t x, int16_t y);
 
-    /**
-     * Get a cell at position (row, col)
-     */
     const BoardCell& GetCell(uint16_t row, uint16_t col) const;
 
-    /**
-     * Render the board to the terminal
-     */
+    void SetCursorMode(CursorMode mode) { cursor_mode = mode; }
+
     void Render(TerminalIO& terminal_io);
 
     void RenderCursor(TerminalIO &terminal_io, bool show_placeholder);
 
-    /**
-     * Get board dimensions
-     */
     uint16_t GetCols() const { return width; }
     uint16_t GetRows() const { return height; }
 
-    /**
-     * Validate coordinates
-     */
     bool IsValidCoord(uint16_t row, uint16_t col) const;
 
 private:
@@ -64,8 +60,11 @@ private:
     uint16_t height;
     uint16_t cursor_x;
     uint16_t cursor_y;
+    uint8_t cursor_sx{0};
+    uint8_t cursor_sy{0};
     uint16_t view_left;
     uint16_t view_top;
+    CursorMode cursor_mode{CursorMode::ENTIRE_CHARACTER};
     std::vector<BoardCell> grid;
 };
 

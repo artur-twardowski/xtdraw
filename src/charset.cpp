@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include<iostream>
+#include <map>
 
 uint32_t GetBoxDrawingCharacter(const box_drawing_spec_t &s) {
     static constexpr uint32_t VERTICAL_LINES[] = {
@@ -69,5 +70,53 @@ uint32_t GetBoxDrawingCharacter(const box_drawing_spec_t &s) {
         }
     }
     return '?';
+}
+static constexpr uint32_t BLOCKS_2x2[] = {
+    0x0020, 0x2598, 0x259d, 0x2580,
+    0x2596, 0x258c, 0x259e, 0x259b,
+    0x2597, 0x259a, 0x2590, 0x259c,
+    0x2584, 0x2599, 0x259f, 0x2588};
+
+static std::map<uint32_t, uint8_t> BuildDecodingMap2x2() {
+    std::map<uint32_t, uint8_t> result;
+    for (size_t ix = 0; ix < sizeof(BLOCKS_2x2)/sizeof(BLOCKS_2x2[0]); ix++) {
+        result.emplace(BLOCKS_2x2[ix], ix);
+    }
+    return result;
+}
+static std::map<uint32_t, uint8_t> BuildDecodingMap2x3() {
+    std::map<uint32_t, uint8_t> result;
+    for (size_t ix = 0; ix < sizeof(BLOCKS_2x2)/sizeof(BLOCKS_2x2[0]); ix++) {
+        result.emplace(ix * 10, ix);
+    }
+    return result;
+}
+
+static const auto BLOCKS_2x2_DEC = BuildDecodingMap2x2();
+static const auto BLOCKS_2x3_DEC = BuildDecodingMap2x3();
+
+uint32_t GetBlockDrawingCharacter(uint8_t pixels, box_drawing_t set) {
+    if (set == box_drawing_t::BLK_2x2) {
+        return BLOCKS_2x2[pixels & 0x0f];
+    }
+    return 0x20;
+}
+
+bool CharacterToPixels(uint8_t &pixels, box_drawing_t &set, uint32_t ch) {
+    auto it2x2 = BLOCKS_2x2_DEC.find(ch);
+    auto it2x3 = BLOCKS_2x3_DEC.find(ch);
+    if (it2x2 != BLOCKS_2x2_DEC.end()) {
+        if (it2x3 == BLOCKS_2x3_DEC.end()) {
+            // If the character was matched only in 2x2 set, switch to 2x2 mode.
+            // Otherwise assume that the information supplied is already correct.
+            set = box_drawing_t::BLK_2x2;
+        }
+        pixels = it2x2->second;
+        return true;
+    } else if (it2x3 != BLOCKS_2x3_DEC.end()) {
+        set = box_drawing_t::BLK_2x3;
+        pixels = it2x3->second;
+    }
+    return false;
 }
 

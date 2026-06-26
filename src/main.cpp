@@ -73,6 +73,13 @@ void ProcessInput(uint32_t seq) {
     } else if (seq_str == "<Right>") {
         g_board->MoveCursor(1, 0);
         redraw = true;
+    } else if (seq_str == "<F1>") {
+        g_board->SetCursorMode(Board::CursorMode::ENTIRE_CHARACTER);
+    } else if (seq_str == "<F2>") {
+        g_board->SetCursorMode(Board::CursorMode::BLK_2x2);
+    } else if (seq_str == " ") {
+        g_board->TogglePixel();
+        redraw = true;
     } else {
         auto it = kInsertChar.find(seq_str);
         if (it != kInsertChar.end()) {
