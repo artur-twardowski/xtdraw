@@ -1,5 +1,6 @@
 #include "board.h"
 #include "terminal_io.h"
+#include "charset.h"
 
 Board::Board(const BoxDimensions &viewport, uint16_t width, uint16_t height) : window(viewport), width(width), height(height) {
     grid.resize(width * height);
@@ -79,12 +80,26 @@ const BoardCell& Board::GetCell(uint16_t row, uint16_t col) const {
 }
 
 void Board::Render(TerminalIO &terminal_io) {
-    static const uint32_t kLeftTopCorner = 0x256d;
-    static const uint32_t kRightTopCorner = 0x256e;
-    static const uint32_t kLeftBottomCorner = 0x2570;
-    static const uint32_t kRightBottomCorner = 0x256f;
-    static const uint32_t kHorizontalLine = 0x2500;
-    static const uint32_t kVerticalLine = 0x2502;
+    const uint32_t kLeftTopCorner = GetBoxDrawingCharacter({
+        .south=line_weight_t::THIN,
+        .east=line_weight_t::THICK,
+        .attributes=ATTR_ROUNDED_CORNERS
+    });
+    const uint32_t kRightTopCorner = GetBoxDrawingCharacter({
+        .south=line_weight_t::THIN,
+        .west=line_weight_t::THICK,
+        .attributes=ATTR_ROUNDED_CORNERS
+    });
+    const uint32_t kLeftBottomCorner = 0x2570;
+    const uint32_t kRightBottomCorner = 0x256f;
+    const uint32_t kHorizontalLine = GetBoxDrawingCharacter({
+        .east=line_weight_t::THIN,
+        .west=line_weight_t::THIN,
+    });
+    const uint32_t kVerticalLine = GetBoxDrawingCharacter({
+        .north=line_weight_t::THIN,
+        .south=line_weight_t::THIN,
+    });
     const uint8_t border_bg = 16;
     const uint8_t border_fg = 255;
 

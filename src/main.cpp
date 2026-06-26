@@ -36,14 +36,11 @@ void OnSignal(int) {
 void ProcessInput(uint32_t seq) {
     static const std::map<std::string, uint32_t> kInsertChar {
         {"0", ' '},
-        {"1", 0x250c},
-        {"2", 0x2500},
-        {"3", 0x2510},
-        {"4", 0x2502},
-        {"6", 0x2506},
-        {"7", 0x2514},
-        {"8", 0x2504},
-        {"9", 0x2518},
+        {"1", 0x1fb00},
+        {"2", 0x1fb01},
+        {"3", 0x1fb02},
+        {"4", 0x1fb03},
+        {"5", 0x1fb04},
 
         {"!", 0x256d},
         {"@", 0x252c},
