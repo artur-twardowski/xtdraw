@@ -19,18 +19,20 @@ void Board::SetCell(uint32_t character, uint8_t bg_color, uint8_t fg_color) {
 
 void Board::TogglePixel() {
     auto &element = grid[cursor_y * width + cursor_x];
+    uint8_t bit = (1 << (cursor_sy * 2 + cursor_sx));
+
     if (cursor_mode == CursorMode::BLK_2x3) {
         box_drawing_t box_drawing = box_drawing_t::BLK_2x3;
         uint8_t pix;
         if (CharacterToPixels(pix, box_drawing, element.character)) {
-            pix = pix ^ (cursor_sy * 3 + cursor_sx);
+            pix ^= bit;
             element.character = GetBlockDrawingCharacter(pix, box_drawing);
         }
     } else if (cursor_mode == CursorMode::BLK_2x2) {
         box_drawing_t box_drawing = box_drawing_t::BLK_2x2;
         uint8_t pix;
         if (CharacterToPixels(pix, box_drawing, element.character)) {
-            pix = pix ^ (1 << (cursor_sy * 2 + cursor_sx));
+            pix ^= bit;
             element.character = GetBlockDrawingCharacter(pix, box_drawing);
         }
     }
@@ -126,6 +128,9 @@ const BoardCell& Board::GetCell(uint16_t row, uint16_t col) const {
         return empty;
     }
 }
+const BoardCell& Board::GetCellUnderCursor() const {
+    return GetCell(cursor_y, cursor_x);
+}
 
 void Board::Render(TerminalIO &terminal_io) {
     const uint32_t kLeftTopCorner = GetBoxDrawingCharacter({
@@ -185,7 +190,7 @@ void Board::Render(TerminalIO &terminal_io) {
 }
 
 void Board::RenderCursor(TerminalIO &terminal_io, bool show_placeholder) {
-    const auto &cell = GetCell(cursor_y, cursor_x);
+    const auto &cell = GetCellUnderCursor();
     terminal_io.SetCursorPosition(
             cursor_x - view_left + window.left + 1,
             cursor_y - view_top + window.top + 1);
@@ -194,7 +199,7 @@ void Board::RenderCursor(TerminalIO &terminal_io, bool show_placeholder) {
             terminal_io.SetColor(cell.foreground_color, cell.background_color);
             terminal_io.Write(cell.character);
         } else {
-            box_drawing_t box_drawing;
+            box_drawing_t box_drawing = cursor_mode == CursorMode::BLK_2x3 ? box_drawing_t::BLK_2x3 : box_drawing_t::BLK_2x2;
             uint8_t pix;
             uint8_t bit = (1 << (cursor_sy * 2 + cursor_sx));
             if (CharacterToPixels(pix, box_drawing, cell.character)) {

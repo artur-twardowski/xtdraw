@@ -28,6 +28,6 @@ struct box_drawing_spec_t {
 uint32_t GetBoxDrawingCharacter(const box_drawing_spec_t &spec);
 
 uint32_t GetBlockDrawingCharacter(uint8_t pixels, box_drawing_t set);
-bool CharacterToPixels(uint8_t &pixels, box_drawing_t &set, uint32_t ch);
+bool CharacterToPixels(uint8_t &pixels, box_drawing_t set, uint32_t ch);
 
 #endif

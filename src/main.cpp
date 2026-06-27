@@ -2,6 +2,7 @@
 #include <map>
 #include <unistd.h>
 #include <signal.h>
+#include "charset.h"
 #include "terminal_io.h"
 #include "board.h"
 #include <iomanip>
@@ -87,6 +88,10 @@ void ProcessInput(uint32_t seq) {
         g_board->SetCursorMode(Board::CursorMode::BLK_2x2);
         redraw_board = true;
         redraw_cursor_info = true;
+    } else if (seq_str == "<F3>") {
+        g_board->SetCursorMode(Board::CursorMode::BLK_2x3);
+        redraw_board = true;
+        redraw_cursor_info = true;
     } else if (seq_str == " ") {
         g_board->TogglePixel();
         redraw_board = true;
@@ -120,6 +125,8 @@ void event_loop(TerminalIO& terminal_io) {
         if (redraw_board) {
             redraw_board = false;
         }
+        terminal_io.SetColor(uint8_t{0}, uint8_t{255});
+        terminal_io.SetCursorPosition(90, 5);
         if (redraw_cursor_info) {
             uint16_t cx, cy;
             uint8_t csx, csy;
@@ -138,9 +145,13 @@ void event_loop(TerminalIO& terminal_io) {
                 }
                 terminal_io.Write(" T");
             }
-
+            std::ostringstream os;
+            os << " " << std::hex << g_board->GetCellUnderCursor().character << "   ";
+            terminal_io.SetColor(uint8_t{4}, uint8_t{15});
+            terminal_io.Write(os.str());
             redraw_cursor_info = false;
         }
+
         ProcessInput(terminal_io.ReadKey());
         usleep(10000);
     }

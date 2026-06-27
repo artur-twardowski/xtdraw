@@ -44,6 +44,7 @@ public:
     void GetCursorPosition(uint16_t &x, uint16_t &y, uint8_t &sx, uint8_t &sy) const;
 
     const BoardCell& GetCell(uint16_t row, uint16_t col) const;
+    const BoardCell& GetCellUnderCursor() const;
 
     void SetCursorMode(CursorMode mode) { cursor_mode = mode; }
     CursorMode GetCursorMode() const { return cursor_mode; }
