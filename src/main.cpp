@@ -5,12 +5,14 @@
 #include "terminal_io.h"
 #include "board.h"
 #include <iomanip>
+#include <sstream>
 
 // Global TerminalIO instance
 TerminalIO* g_terminal_io = nullptr;
 Board *g_board = nullptr;
 
-bool redraw = true;
+bool redraw_board = true;
+bool redraw_cursor_info = true;
 
 /**
  * Handle cleanup on exit
@@ -63,28 +65,36 @@ void ProcessInput(uint32_t seq) {
         exit(0);
     } else if (seq_str == "<Up>") {
         g_board->MoveCursor(0, -1);
-        redraw = true;
+        redraw_board = true;
+        redraw_cursor_info = true;
     } else if (seq_str == "<Down>") {
         g_board->MoveCursor(0, 1);
-        redraw = true;
+        redraw_board = true;
+        redraw_cursor_info = true;
     } else if (seq_str == "<Left>") {
         g_board->MoveCursor(-1, 0);
-        redraw = true;
+        redraw_board = true;
+        redraw_cursor_info = true;
     } else if (seq_str == "<Right>") {
         g_board->MoveCursor(1, 0);
-        redraw = true;
+        redraw_board = true;
+        redraw_cursor_info = true;
     } else if (seq_str == "<F1>") {
         g_board->SetCursorMode(Board::CursorMode::ENTIRE_CHARACTER);
+        redraw_board = true;
+        redraw_cursor_info = true;
     } else if (seq_str == "<F2>") {
         g_board->SetCursorMode(Board::CursorMode::BLK_2x2);
+        redraw_board = true;
+        redraw_cursor_info = true;
     } else if (seq_str == " ") {
         g_board->TogglePixel();
-        redraw = true;
+        redraw_board = true;
     } else {
         auto it = kInsertChar.find(seq_str);
         if (it != kInsertChar.end()) {
             g_board->SetCell(it->second);
-            redraw = true;
+            redraw_board = true;
         }
     }
 }
@@ -100,15 +110,36 @@ void event_loop(TerminalIO& terminal_io) {
             draw_frame = 0;
         }
 
-        if (redraw) {
+        if (redraw_board) {
             g_board->Render(terminal_io);
         }
 
-        if (redraw || draw_frame % 16 == 0) {
+        if (redraw_board || draw_frame % 16 == 0) {
             g_board->RenderCursor(terminal_io, draw_frame > 0);
         }
-        if (redraw) {
-            redraw = false;
+        if (redraw_board) {
+            redraw_board = false;
+        }
+        if (redraw_cursor_info) {
+            uint16_t cx, cy;
+            uint8_t csx, csy;
+            g_board->GetCursorPosition(cx, cy, csx, csy);
+
+            terminal_io.SetCursorPosition(0, 18);
+            terminal_io.SetColor(uint8_t{4}, uint8_t{15});
+            if (g_board->GetCursorMode() == Board::CursorMode::ENTIRE_CHARACTER) {
+                terminal_io.Write(std::to_string(cx) + ", " + std::to_string(cy));
+            } else {
+                terminal_io.Write(std::to_string(cx) + "." + std::to_string(csx) + ", " + std::to_string(cy) + "." + std::to_string(csy));
+                if (g_board->IsTogglingAvailable()) {
+                    terminal_io.SetColor({}, uint8_t{11});
+                } else {
+                    terminal_io.SetColor({}, uint8_t{9});
+                }
+                terminal_io.Write(" T");
+            }
+
+            redraw_cursor_info = false;
         }
         ProcessInput(terminal_io.ReadKey());
         usleep(10000);
@@ -119,7 +150,7 @@ void event_loop(TerminalIO& terminal_io) {
 int main() {
     // Create TerminalIO instance
     TerminalIO terminal_io(std::cout);
-    Board board({20, 2, 80, 16}, 120, 60);
+    Board board({0, 0, 80, 16}, 120, 60);
     g_terminal_io = &terminal_io;
     g_board = &board;
 

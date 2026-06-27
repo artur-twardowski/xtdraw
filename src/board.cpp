@@ -87,6 +87,37 @@ void Board::MoveCursor(int16_t x, int16_t y) {
     }
 }
 
+void Board::GetCursorPosition(uint16_t &x, uint16_t &y, uint8_t &sx, uint8_t &sy) const {
+    x = cursor_x;
+    y = cursor_y;
+    sx = cursor_sx;
+    sy = cursor_sy;
+}
+
+bool Board::IsTogglingAvailable() const {
+    uint8_t pix;
+    box_drawing_t box_drawing_initial, box_drawing_actual;
+    auto &element = grid[cursor_y * width + cursor_x];
+
+    switch (cursor_mode) {
+        case CursorMode::ENTIRE_CHARACTER:
+            return true;
+        case CursorMode::BLK_2x2:
+            box_drawing_initial = box_drawing_t::BLK_2x2;
+            break;
+        case CursorMode::BLK_2x3:
+            box_drawing_initial = box_drawing_t::BLK_2x3;
+            break;
+    }
+    box_drawing_actual = box_drawing_initial;
+
+    if (CharacterToPixels(pix, box_drawing_actual, element.character)) {
+        return box_drawing_initial == box_drawing_actual;
+    } else {
+        return false;
+    }
+}
+
 const BoardCell& Board::GetCell(uint16_t row, uint16_t col) const {
     static const BoardCell empty;
     if (IsValidCoord(row, col)) {
@@ -165,13 +196,15 @@ void Board::RenderCursor(TerminalIO &terminal_io, bool show_placeholder) {
         } else {
             box_drawing_t box_drawing;
             uint8_t pix;
+            uint8_t bit = (1 << (cursor_sy * 2 + cursor_sx));
             if (CharacterToPixels(pix, box_drawing, cell.character)) {
-                pix = pix ^ (1 << (cursor_sy * 2 + cursor_sx));
+                pix ^= bit;
                 terminal_io.SetColor(cell.background_color, cell.foreground_color);
                 terminal_io.Write(GetBlockDrawingCharacter(pix, box_drawing));
             } else {
-                terminal_io.SetColor(cell.foreground_color, cell.background_color);
-                terminal_io.Write(cell.character);
+                pix = bit;
+                terminal_io.SetColor(cell.background_color, cell.foreground_color);
+                terminal_io.Write(GetBlockDrawingCharacter(pix, box_drawing));
             }
         }
     } else {
