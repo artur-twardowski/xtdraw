@@ -59,39 +59,37 @@ void ProcessInput(uint32_t seq) {
     if (!seq) {
         return;
     }
+
+    auto move_cursor = [&](int dx, int dy) {
+        g_board->MoveCursor(dx, dy);
+        redraw_board = true;
+        redraw_cursor_info = true;
+    };
+    auto change_cursor_mode = [&](Board::CursorMode mode) {
+        g_board->SetCursorMode(mode);
+        redraw_board = true;
+        redraw_cursor_info = true;
+    };
+
     const std::string seq_str = KeyCodeToString(seq);
     if (seq == 'q' || seq == 'Q') {
         // Exit the application
         OnClose();
         exit(0);
     } else if (seq_str == "<Up>") {
-        g_board->MoveCursor(0, -1);
-        redraw_board = true;
-        redraw_cursor_info = true;
+        move_cursor(0, -1);
     } else if (seq_str == "<Down>") {
-        g_board->MoveCursor(0, 1);
-        redraw_board = true;
-        redraw_cursor_info = true;
+        move_cursor(0, 1);
     } else if (seq_str == "<Left>") {
-        g_board->MoveCursor(-1, 0);
-        redraw_board = true;
-        redraw_cursor_info = true;
+        move_cursor(-1, 0);
     } else if (seq_str == "<Right>") {
-        g_board->MoveCursor(1, 0);
-        redraw_board = true;
-        redraw_cursor_info = true;
+        move_cursor(1, 0);
     } else if (seq_str == "<F1>") {
-        g_board->SetCursorMode(Board::CursorMode::ENTIRE_CHARACTER);
-        redraw_board = true;
-        redraw_cursor_info = true;
+        change_cursor_mode(Board::CursorMode::ENTIRE_CHARACTER);
     } else if (seq_str == "<F2>") {
-        g_board->SetCursorMode(Board::CursorMode::BLK_2x2);
-        redraw_board = true;
-        redraw_cursor_info = true;
+        change_cursor_mode(Board::CursorMode::BLK_2x2);
     } else if (seq_str == "<F3>") {
-        g_board->SetCursorMode(Board::CursorMode::BLK_2x3);
-        redraw_board = true;
-        redraw_cursor_info = true;
+        change_cursor_mode(Board::CursorMode::BLK_2x3);
     } else if (seq_str == " ") {
         g_board->TogglePixel();
         redraw_board = true;
@@ -104,9 +102,46 @@ void ProcessInput(uint32_t seq) {
     }
 }
 
-/**
- * Main event loop
- */
+void RedrawBoard(bool &redraw_board, TerminalIO &terminal_io, Board &board, uint32_t draw_frame) {
+    if (redraw_board) {
+        board.Render(terminal_io);
+    }
+
+    if (redraw_board || draw_frame % 16 == 0) {
+        board.RenderCursor(terminal_io, draw_frame > 0);
+    }
+    if (redraw_board) {
+        redraw_board = false;
+    }
+}
+
+void RedrawCursorInfo(bool &redraw_cursor_info, TerminalIO &terminal_io, Board &board) {
+        if (redraw_cursor_info) {
+            uint16_t cx, cy;
+            uint8_t csx, csy;
+            board.GetCursorPosition(cx, cy, csx, csy);
+
+            terminal_io.SetCursorPosition(0, 18);
+            terminal_io.SetColor(uint8_t{4}, uint8_t{15});
+            if (board.GetCursorMode() == Board::CursorMode::ENTIRE_CHARACTER) {
+                terminal_io.Write(std::to_string(cx) + ", " + std::to_string(cy));
+            } else {
+                terminal_io.Write(std::to_string(cx) + "." + std::to_string(csx) + ", " + std::to_string(cy) + "." + std::to_string(csy));
+                if (board.IsTogglingAvailable()) {
+                    terminal_io.SetColor({}, uint8_t{11});
+                } else {
+                    terminal_io.SetColor({}, uint8_t{9});
+                }
+                terminal_io.Write(" T");
+            }
+            std::ostringstream os;
+            os << " " << std::hex << board.GetCellUnderCursor().character << "   ";
+            terminal_io.SetColor(uint8_t{4}, uint8_t{15});
+            terminal_io.Write(os.str());
+            redraw_cursor_info = false;
+        }
+}
+
 void event_loop(TerminalIO& terminal_io) {
     static uint32_t draw_frame = 0;
     while (true) {
@@ -115,42 +150,11 @@ void event_loop(TerminalIO& terminal_io) {
             draw_frame = 0;
         }
 
-        if (redraw_board) {
-            g_board->Render(terminal_io);
-        }
+        RedrawBoard(redraw_board, terminal_io, *g_board, draw_frame);
+        RedrawCursorInfo(redraw_cursor_info, terminal_io, *g_board);
 
-        if (redraw_board || draw_frame % 16 == 0) {
-            g_board->RenderCursor(terminal_io, draw_frame > 0);
-        }
-        if (redraw_board) {
-            redraw_board = false;
-        }
         terminal_io.SetColor(uint8_t{0}, uint8_t{255});
         terminal_io.SetCursorPosition(90, 5);
-        if (redraw_cursor_info) {
-            uint16_t cx, cy;
-            uint8_t csx, csy;
-            g_board->GetCursorPosition(cx, cy, csx, csy);
-
-            terminal_io.SetCursorPosition(0, 18);
-            terminal_io.SetColor(uint8_t{4}, uint8_t{15});
-            if (g_board->GetCursorMode() == Board::CursorMode::ENTIRE_CHARACTER) {
-                terminal_io.Write(std::to_string(cx) + ", " + std::to_string(cy));
-            } else {
-                terminal_io.Write(std::to_string(cx) + "." + std::to_string(csx) + ", " + std::to_string(cy) + "." + std::to_string(csy));
-                if (g_board->IsTogglingAvailable()) {
-                    terminal_io.SetColor({}, uint8_t{11});
-                } else {
-                    terminal_io.SetColor({}, uint8_t{9});
-                }
-                terminal_io.Write(" T");
-            }
-            std::ostringstream os;
-            os << " " << std::hex << g_board->GetCellUnderCursor().character << "   ";
-            terminal_io.SetColor(uint8_t{4}, uint8_t{15});
-            terminal_io.Write(os.str());
-            redraw_cursor_info = false;
-        }
 
         ProcessInput(terminal_io.ReadKey());
         usleep(10000);
