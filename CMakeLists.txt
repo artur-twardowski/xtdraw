@@ -8,6 +8,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Werror")
 
 set(XTDRAW_SOURCES
     src/main.cpp
+    src/xtdraw_app.cpp
     src/terminal_io.cpp
     src/board.cpp
     src/charset.cpp)
