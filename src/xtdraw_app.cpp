@@ -66,14 +66,26 @@ void App::ProcessInput(uint32_t keycode) {
         // Exit the application
         OnTerminationSignal();
         exit(0);
-    } else if (seq_str == "<Up>") {
+    } else if (seq_str == "<Up>" || seq_str == "k") {
         move_cursor(0, -1);
-    } else if (seq_str == "<Down>") {
+    } else if (seq_str == "<Down>" || seq_str == "j") {
         move_cursor(0, 1);
-    } else if (seq_str == "<Left>") {
+    } else if (seq_str == "<Left>" || seq_str == "h") {
         move_cursor(-1, 0);
-    } else if (seq_str == "<Right>") {
+    } else if (seq_str == "<Right>" || seq_str == "l") {
         move_cursor(1, 0);
+    } else if (seq_str == "[") {
+        if (active_set_ix > 0) active_set_ix--;
+    } else if (seq_str == "]") {
+        active_set_ix++;
+    } else if (seq_str == "H") {
+        picker_char_ix = (picker_char_ix - 1) & 0xFF;
+    } else if (seq_str == "L") {
+        picker_char_ix = (picker_char_ix + 1) & 0xFF;
+    } else if (seq_str == "J") {
+        picker_char_ix = (picker_char_ix + 32) & 0xFF;
+    } else if (seq_str == "K") {
+        picker_char_ix = (picker_char_ix - 32) & 0xFF;
     } else if (seq_str == "<F1>") {
         change_cursor_mode(Board::CursorMode::ENTIRE_CHARACTER);
     } else if (seq_str == "<F2>") {
@@ -96,6 +108,7 @@ void App::RedrawBoard(uint32_t draw_frame) {
     if (redraw_board) {
         board.Render(terminal_io);
     }
+    RedrawCharacterPicker();
 
     if (redraw_board || draw_frame % 16 == 0) {
         board.RenderCursor(terminal_io, draw_frame > 0);
@@ -103,6 +116,7 @@ void App::RedrawBoard(uint32_t draw_frame) {
     if (redraw_board) {
         redraw_board = false;
     }
+
 }
 
 void App::RedrawCursorInfo() {
@@ -130,6 +144,53 @@ void App::RedrawCursorInfo() {
         terminal_io.SetColor(uint8_t{4}, uint8_t{15});
         terminal_io.Write(os.str());
         redraw_cursor_info = false;
+    }
+}
+
+void App::GetCharacterSubset(std::vector<uint32_t> &chars, bool &double_width, size_t set_index) {
+    chars.resize(256);
+    if (set_index == 0) {
+        size_t ins_ix = 0;
+        for (size_t ix = 32; ix < 127; ix++) {
+            chars[ins_ix++] = ix;
+        }
+        for (size_t ix = 161; ix < 173; ix++) {
+            chars[ins_ix++] = ix;
+        }
+        for (size_t ix = 174; ix < 256; ix++) {
+            chars[ins_ix++] = ix;
+        }
+    } else {
+        for (size_t ix = 0; ix < 256; ix++) {
+            chars[ix] = set_index * 256 + ix;
+        }
+    }
+    double_width = false;
+}
+
+void App::RedrawCharacterPicker() {
+    std::vector<uint32_t> active_set;
+    bool double_width;
+    GetCharacterSubset(active_set, double_width, active_set_ix);
+    for (size_t y = 0; y < 8; y++) {
+        terminal_io.SetCursorPosition(83, y + 1);
+        for (size_t x = 0; x < 32; x++) {
+            if (y * 32 + x == picker_char_ix) {
+                terminal_io.SetColor(uint8_t{2}, uint8_t{15});
+            } else {
+                terminal_io.SetColor(uint8_t{4}, uint8_t{7});
+            }
+            uint32_t ix = y * 32 + x;
+            if (ix < active_set.size()) {
+                uint32_t ch = active_set[ix];
+                if (ch >= ' ') {
+                    terminal_io.Write(ch);
+                } else {
+                    terminal_io.Write(' ');
+                }
+            }
+            
+        }
     }
 }
 

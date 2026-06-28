@@ -230,8 +230,11 @@ void TerminalIO::SetColor(std::optional<color_t> bg, std::optional<color_t> fg) 
 TerminalIO::~TerminalIO() { RestoreTerminal(); }
 
 static const std::map<uint32_t, std::string> SPECIAL_KEYCODES{
-    {0x01, "C-a"},          {0x02, "C-b"},        {0x03, "C-c"},        {0x04, "C-d"},         {0x05, "C-e"},
-    {0x06, "C-f"},          {0x07, "C-g"},        {'<', "LT"},          {'>', "GT"},           {0x800000d0, "F1"},
+    {0x01, "C-a"},
+    {0x02, "C-b"},        {0x03, "C-c"},        {0x04, "C-d"},         {0x05, "C-e"},
+    {0x06, "C-f"},          {0x07, "C-g"},
+    {0x08, "C-h"}, {0x09, "C-i"}, {0x0A, "C-j"}, {0x0B, "C-k"}, {0x0C, "C-l"},
+    {'<', "LT"},          {'>', "GT"},           {0x800000d0, "F1"},
     {0x800000d1, "F2"},     {0x800000d2, "F3"},   {0x800000d3, "F4"},   {0x4000fab1, "F5"},    {0x4000faf1, "F6"},
     {0x4000fb11, "F7"},     {0x4000fb31, "F8"},   {0x4000fa12, "F9"},   {0x4000fa32, "F10"},   {0x4000fa72, "F11"},
     {0x4000fa92, "F12"},    {0x40085771, "C-F1"}, {0x4008d771, "C-F2"}, {0x40084b71, "S-F1"},  {0x40084f71, "M-F1"},
