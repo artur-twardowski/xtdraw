@@ -1,17 +1,12 @@
-#include "xtdraw_app.h"
 #include <signal.h>
+
+#include "xtdraw_app.h"
 
 xtdraw::App app;
 
-void OnTerminationSignal() {
-    app.OnTerminationSignal();
-}
-void OnTerminationSignal(int) {
-    app.OnTerminationSignal();
-}
-void OnResizeSignal(int) {
-    app.OnResizeSignal();
-}
+void OnTerminationSignal() { app.OnTerminationSignal(); }
+void OnTerminationSignal(int) { app.OnTerminationSignal(); }
+void OnResizeSignal(int) { app.OnResizeSignal(); }
 
 int main() {
     xtdraw::App app;

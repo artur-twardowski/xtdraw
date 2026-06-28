@@ -42,7 +42,6 @@ bool App::Run() {
 void App::ProcessInput(uint32_t keycode) {
     static const std::map<std::string, uint32_t> kInsertChar{
         {"0", ' '},    {"1", 0x1fb00}, {"2", 0x1fb01}, {"3", 0x1fb02}, {"4", 0x1fb03}, {"5", 0x1fb04},
-
         {"!", 0x256d}, {"@", 0x252c},  {"#", 0x256e},  {"$", 0x251c},  {"%", 0x253c},  {"^", 0x2524},
         {"&", 0x2570}, {"*", 0x2534},  {"(", 0x256f},
     };
