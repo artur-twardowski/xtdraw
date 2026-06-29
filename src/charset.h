@@ -5,7 +5,7 @@
 
 enum struct line_weight_t : unsigned int { THIN = 0, THICK, DOUBLE, NONE };
 
-enum struct box_drawing_t { BLK_2x2, BLK_2x3 };
+enum struct box_drawing_t { BLK_2x2, BLK_2x3, BLK_2x4_BRAILLE };
 
 static inline const uint8_t ATTR_SOLID           = 0x00;
 static inline const uint8_t ATTR_DASH2           = 0x01;

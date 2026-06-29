@@ -90,6 +90,8 @@ void App::ProcessInput(uint32_t keycode) {
         change_cursor_mode(Board::CursorMode::BLK_2x2);
     } else if (seq_str == "<F3>") {
         change_cursor_mode(Board::CursorMode::BLK_2x3);
+    } else if (seq_str == "<F4>") {
+        change_cursor_mode(Board::CursorMode::BLK_2x4);
     } else if (seq_str == " ") {
         if (board.GetCursorMode() == Board::CursorMode::ENTIRE_CHARACTER) {
             uint32_t c = board.GetCellUnderCursor().character;
@@ -157,6 +159,9 @@ void App::RedrawCursorInfo() {
                     break;
                 case Board::CursorMode::BLK_2x3:
                     terminal_io.Write(" 2x3 ");
+                    break;
+                case Board::CursorMode::BLK_2x4:
+                    terminal_io.Write(" 2x4 ");
                     break;
                 default:
                     break;

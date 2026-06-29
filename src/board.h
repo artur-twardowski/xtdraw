@@ -29,7 +29,7 @@ struct BoxDimensions {
  */
 class Board {
    public:
-    enum struct CursorMode { ENTIRE_CHARACTER, BLK_2x2, BLK_2x3 };
+    enum struct CursorMode { ENTIRE_CHARACTER, BLK_2x2, BLK_2x3, BLK_2x4 };
     Board(const BoxDimensions &viewport, uint16_t width = 80, uint16_t height = 25);
 
     void SetCell(uint32_t character, uint8_t bg_color = 0, uint8_t fg_color = 15);

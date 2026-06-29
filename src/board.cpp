@@ -22,7 +22,15 @@ void Board::TogglePixel() {
     auto   &element = grid[cursor_y * width + cursor_x];
     uint8_t bit     = (1 << (cursor_sy * 2 + cursor_sx));
 
-    if (cursor_mode == CursorMode::BLK_2x3) {
+    // TODO: remove code repetition
+    if (cursor_mode == CursorMode::BLK_2x4) {
+        box_drawing_t box_drawing = box_drawing_t::BLK_2x4_BRAILLE;
+        uint8_t       pix;
+        if (CharacterToPixels(pix, box_drawing, element.character)) {
+            pix ^= bit;
+            element.character = GetBlockDrawingCharacter(pix, box_drawing);
+        }
+    } else if (cursor_mode == CursorMode::BLK_2x3) {
         box_drawing_t box_drawing = box_drawing_t::BLK_2x3;
         uint8_t       pix;
         if (CharacterToPixels(pix, box_drawing, element.character)) {
@@ -67,12 +75,22 @@ void Board::MoveCursor(int16_t x, int16_t y) {
         cy   = cursor_y * 3 + cursor_sy;
         maxx = width * 2;
         maxy = height * 3;
+    } else if (cursor_mode == CursorMode::BLK_2x4) {
+        cx   = cursor_x * 2 + cursor_sx;
+        cy   = cursor_y * 4 + cursor_sy;
+        maxx = width * 2;
+        maxy = height * 4;
     }
 
     cx = std::min(std::max(0, cx + x), maxx);
     cy = std::min(std::max(0, cy + y), maxy);
 
-    if (cursor_mode == CursorMode::BLK_2x3) {
+    if (cursor_mode == CursorMode::BLK_2x4) {
+        cursor_x  = cx / 2;
+        cursor_sx = cx % 2;
+        cursor_y  = cy / 4;
+        cursor_sy = cy % 4;
+    } else if (cursor_mode == CursorMode::BLK_2x3) {
         cursor_x  = cx / 2;
         cursor_sx = cx % 2;
         cursor_y  = cy / 3;
@@ -110,6 +128,9 @@ bool Board::IsTogglingAvailable() const {
             break;
         case CursorMode::BLK_2x3:
             box_drawing_initial = box_drawing_t::BLK_2x3;
+            break;
+        case CursorMode::BLK_2x4:
+            box_drawing_initial = box_drawing_t::BLK_2x4_BRAILLE;
             break;
     }
     box_drawing_actual = box_drawing_initial;
@@ -193,8 +214,21 @@ void Board::RenderCursor(TerminalIO &terminal_io, bool show_placeholder) {
             terminal_io.SetColor(cell.foreground_color, cell.background_color);
             terminal_io.Write(cell.character);
         } else {
-            box_drawing_t box_drawing =
-                cursor_mode == CursorMode::BLK_2x3 ? box_drawing_t::BLK_2x3 : box_drawing_t::BLK_2x2;
+            box_drawing_t box_drawing;
+            switch (cursor_mode) {
+                case CursorMode::BLK_2x2:
+                    box_drawing = box_drawing_t::BLK_2x2;
+                    break;
+                case CursorMode::BLK_2x3:
+                    box_drawing = box_drawing_t::BLK_2x3;
+                    break;
+                case CursorMode::BLK_2x4:
+                    box_drawing = box_drawing_t::BLK_2x4_BRAILLE;
+                    break;
+                default:
+                    box_drawing = box_drawing_t::BLK_2x2;
+                    break;
+            }
             uint8_t pix;
             uint8_t bit = (1 << (cursor_sy * 2 + cursor_sx));
             if (CharacterToPixels(pix, box_drawing, cell.character)) {
