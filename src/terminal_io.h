@@ -16,7 +16,7 @@ class TerminalIO {
     struct rgb_t {
         uint8_t r, g, b;
     };
-    enum struct color_mode_t { COLOR_8, COLOR_256, COLOR_RGB };
+    enum struct color_mode_t { COLOR_7, COLOR_256, COLOR_RGB };
     typedef std::variant<uint8_t, rgb_t> color_t;
     explicit TerminalIO(std::ostream &os) : out_stream(os), last_bg_color(uint8_t{0}), last_fg_color(uint8_t{15}) {}
 
@@ -24,6 +24,7 @@ class TerminalIO {
     void     RestoreTerminal();
     uint32_t ReadKey();
     void     Write(const std::string &data);
+    void     Write(const std::string &data, size_t window_size);
     void     Write(uint32_t character);
     void     Flush();
 

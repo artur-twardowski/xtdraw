@@ -3,6 +3,7 @@
 #include <functional>
 #include <map>
 #include <sstream>
+#include <iomanip>
 
 #include "xtdraw_app.h"
 
@@ -108,7 +109,8 @@ void App::RedrawBoard(uint32_t draw_frame) {
     if (redraw_board) {
         board.Render(terminal_io);
     }
-    RedrawCharacterPicker();
+
+    RedrawCharacterPicker(board.GetCursorMode() == Board::CursorMode::ENTIRE_CHARACTER);
 
     if (redraw_board || draw_frame % 16 == 0) {
         board.RenderCursor(terminal_io, draw_frame > 0);
@@ -125,60 +127,85 @@ void App::RedrawCursorInfo() {
         uint8_t  csx, csy;
         board.GetCursorPosition(cx, cy, csx, csy);
 
-        terminal_io.SetCursorPosition(0, 18);
+        terminal_io.SetCursorPosition(83, 12);
         terminal_io.SetColor(uint8_t{4}, uint8_t{15});
-        if (board.GetCursorMode() == Board::CursorMode::ENTIRE_CHARACTER) {
-            terminal_io.Write(std::to_string(cx) + ", " + std::to_string(cy));
+        const auto cursor_mode = board.GetCursorMode();
+        if (cursor_mode == Board::CursorMode::ENTIRE_CHARACTER) {
+            std::ostringstream line;
+            line << std::setw(4) << cx << "  |";
+            line << std::setw(4) << cy << "  |";
+            terminal_io.Write(line.str(), 14);
         } else {
-            terminal_io.Write(std::to_string(cx) + "." + std::to_string(csx) + ", " + std::to_string(cy) + "." +
-                              std::to_string(csy));
-            if (board.IsTogglingAvailable()) {
-                terminal_io.SetColor({}, uint8_t{11});
-            } else {
-                terminal_io.SetColor({}, uint8_t{9});
-            }
-            terminal_io.Write(" T");
+            std::ostringstream line;
+            line << std::setw(4) << cx << "." << int(csx) << "|";
+            line << std::setw(4) << cy << "." << int(csy) << "|";
+            terminal_io.Write(line.str(), 14);
         }
+        if (cursor_mode == Board::CursorMode::ENTIRE_CHARACTER) {
+            terminal_io.SetColor({}, uint8_t{11});
+            terminal_io.Write(" CHAR");
+        } else {
+            terminal_io.SetColor({}, board.IsTogglingAvailable() ? uint8_t{11} : uint8_t{9});
+            switch (cursor_mode) {
+                case Board::CursorMode::BLK_2x2:
+                    terminal_io.Write(" 2x2 ");
+                    break;
+                case Board::CursorMode::BLK_2x3:
+                    terminal_io.Write(" 2x3 ");
+                    break;
+                default:
+                    break;
+            }
+        }
+        uint32_t ch = board.GetCellUnderCursor().character;
         std::ostringstream os;
-        os << " " << std::hex << board.GetCellUnderCursor().character << "   ";
+        os << "| " << std::setw(8) << std::hex << ch << "  ";
         terminal_io.SetColor(uint8_t{4}, uint8_t{15});
         terminal_io.Write(os.str());
+        terminal_io.Write(ch);
         redraw_cursor_info = false;
     }
 }
 
-void App::GetCharacterSubset(std::vector<uint32_t> &chars, bool &double_width, size_t set_index) {
+void App::GetCharacterSubset(std::vector<uint32_t> &chars, bool &double_width, std::string &subset_name, size_t set_index) {
+    struct SetDescriptor {
+        std::string name;
+        bool double_width{false};
+        std::vector<std::pair<uint32_t, uint32_t>> subsets;
+    };
+    const std::vector<SetDescriptor> kSets = {
+        {.name="ASCII and Latin-1", .subsets={{32, 126}, {161, 0xAC}, {0xAE, 255}}},
+        {.name="Greek", .subsets={{0x370, 0x3ff}}},
+        {.name="Cyrillic", .subsets={{0x400, 0x4ff}}},
+        {.name="Braille", .subsets={{0x2800, 0x28ff}}},
+    };
     chars.resize(256);
-    if (set_index == 0) {
-        size_t ins_ix = 0;
-        for (size_t ix = 32; ix < 127; ix++) {
+    const auto &set = set_index < kSets.size() ? kSets[set_index] : kSets[0];
+    size_t ins_ix = 0;
+    for (const auto &[subset_lo, subset_hi]: set.subsets) {
+        for (size_t ix = subset_lo; ix <= subset_hi; ix++) {
             chars[ins_ix++] = ix;
-        }
-        for (size_t ix = 161; ix < 173; ix++) {
-            chars[ins_ix++] = ix;
-        }
-        for (size_t ix = 174; ix < 256; ix++) {
-            chars[ins_ix++] = ix;
-        }
-    } else {
-        for (size_t ix = 0; ix < 256; ix++) {
-            chars[ix] = set_index * 256 + ix;
         }
     }
-    double_width = false;
+    double_width = set.double_width;
+    subset_name = set.name;
 }
 
-void App::RedrawCharacterPicker() {
+void App::RedrawCharacterPicker(bool active) {
     std::vector<uint32_t> active_set;
     bool double_width;
-    GetCharacterSubset(active_set, double_width, active_set_ix);
+    std::string subset_name;
+    GetCharacterSubset(active_set, double_width, subset_name, active_set_ix);
+    terminal_io.SetCursorPosition(83, 0);
+    terminal_io.SetColor(uint8_t{12}, uint8_t{0});
+    terminal_io.Write(subset_name, 32);
     for (size_t y = 0; y < 8; y++) {
         terminal_io.SetCursorPosition(83, y + 1);
         for (size_t x = 0; x < 32; x++) {
             if (y * 32 + x == picker_char_ix) {
-                terminal_io.SetColor(uint8_t{2}, uint8_t{15});
+                terminal_io.SetColor(active ? uint8_t{2} : uint8_t{7}, uint8_t{15});
             } else {
-                terminal_io.SetColor(uint8_t{4}, uint8_t{7});
+                terminal_io.SetColor(active ? uint8_t{4} : uint8_t{8}, uint8_t{7});
             }
             uint32_t ix = y * 32 + x;
             if (ix < active_set.size()) {
@@ -192,6 +219,12 @@ void App::RedrawCharacterPicker() {
             
         }
     }
+    terminal_io.SetCursorPosition(83 + 22, 9);
+    terminal_io.SetColor(uint8_t{4}, uint8_t{15});
+    std::ostringstream line;
+    line << std::hex << std::setw(8) << active_set[picker_char_ix];
+    terminal_io.Write(line.str(), 10);
+
 }
 
 void App::OnTerminationSignal() {

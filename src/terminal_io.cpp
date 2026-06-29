@@ -10,12 +10,14 @@
 
 static constexpr const char ESC = '\033';
 
-static constexpr uint8_t ExtractBits(uint32_t in, uint8_t lsb, uint8_t count) {
+static constexpr uint8_t
+ExtractBits(uint32_t in, uint8_t lsb, uint8_t count) {
     const uint32_t mask = ((1 << count) - 1) << lsb;
     return (in & mask) >> lsb;
 }
 
-bool operator==(const TerminalIO::color_t &c1, const TerminalIO::color_t &c2) {
+bool
+operator==(const TerminalIO::color_t &c1, const TerminalIO::color_t &c2) {
     using rgb_t = TerminalIO::rgb_t;
     if (std::holds_alternative<uint8_t>(c1) && std::holds_alternative<uint8_t>(c2)) {
         return std::get<uint8_t>(c1) == std::get<uint8_t>(c2);
@@ -28,9 +30,13 @@ bool operator==(const TerminalIO::color_t &c1, const TerminalIO::color_t &c2) {
     }
 }
 
-bool operator!=(const TerminalIO::color_t &c1, const TerminalIO::color_t &c2) { return !(c1 == c2); }
+bool
+operator!=(const TerminalIO::color_t &c1, const TerminalIO::color_t &c2) {
+    return !(c1 == c2);
+}
 
-static std::string EncodeUTF8(uint32_t keycode) {
+static std::string
+EncodeUTF8(uint32_t keycode) {
     char result[5];
     if (keycode <= 0x7F) {
         result[0] = ExtractBits(keycode, 0, 7);
@@ -54,7 +60,8 @@ static std::string EncodeUTF8(uint32_t keycode) {
     return result;
 }
 
-bool TerminalIO::EnableRawMode() {
+bool
+TerminalIO::EnableRawMode() {
     if (tcgetattr(STDIN_FILENO, &original_termios) == -1) {
         perror("tcgetattr");
         return false;
@@ -81,14 +88,16 @@ bool TerminalIO::EnableRawMode() {
     return true;
 }
 
-void TerminalIO::RestoreTerminal() {
+void
+TerminalIO::RestoreTerminal() {
     if (raw_mode_enabled) {
         tcsetattr(STDIN_FILENO, TCSAFLUSH, &original_termios);
         raw_mode_enabled = false;
     }
 }
 
-uint32_t TerminalIO::ReadUTF8(uint8_t first) {
+uint32_t
+TerminalIO::ReadUTF8(uint8_t first) {
     size_t   count = 0;
     uint8_t  buf[3];
     uint32_t result;
@@ -117,7 +126,8 @@ uint32_t TerminalIO::ReadUTF8(uint8_t first) {
     }
 }
 
-uint32_t TerminalIO::ReadKey() {
+uint32_t
+TerminalIO::ReadKey() {
     uint32_t result = 0;
     uint8_t  ch;
     ssize_t  bytes_read = read(STDIN_FILENO, &ch, 1);
@@ -189,24 +199,53 @@ uint32_t TerminalIO::ReadKey() {
     return result;
 }
 
-void TerminalIO::ClearScreen() {
+void
+TerminalIO::ClearScreen() {
     // Clear entire screen and move cursor to home (0,0)
     out_stream << ESC << "[2J" << ESC << "[H" << std::flush;
 }
 
-void TerminalIO::SetCursorPosition(int col, int row) {
+void
+TerminalIO::SetCursorPosition(int col, int row) {
     out_stream << ESC << "[" << (row + 1) << ";" << (col + 1) << "H" << std::flush;
 }
 
-void TerminalIO::ShowCursor() { out_stream << ESC << "[?25h" << std::flush; }
+void
+TerminalIO::ShowCursor() {
+    out_stream << ESC << "[?25h" << std::flush;
+}
 
-void TerminalIO::HideCursor() { out_stream << ESC << "[?25l" << std::flush; }
+void
+TerminalIO::HideCursor() {
+    out_stream << ESC << "[?25l" << std::flush;
+}
 
-void TerminalIO::Write(const std::string &data) { out_stream << data; }
-void TerminalIO::Write(uint32_t character) { out_stream << EncodeUTF8(character); }
-void TerminalIO::Flush() { out_stream.flush(); }
+void
+TerminalIO::Write(const std::string &data) {
+    out_stream << data;
+}
+void
+TerminalIO::Write(const std::string &data, size_t window_size) {
+    if (data.size() < window_size) {
+        Write(data);
+        for (size_t ix = data.size(); ix < window_size; ix++) {
+            Write(' ');
+        }
+    } else {
+        Write(data.substr(0, window_size));
+    }
+}
+void
+TerminalIO::Write(uint32_t character) {
+    out_stream << EncodeUTF8(character);
+}
+void
+TerminalIO::Flush() {
+    out_stream.flush();
+}
 
-void TerminalIO::SetColor(std::optional<color_t> bg, std::optional<color_t> fg) {
+void
+TerminalIO::SetColor(std::optional<color_t> bg, std::optional<color_t> fg) {
     bool put_bg = (bg.has_value() && last_bg_color != *bg);
     bool put_fg = (fg.has_value() && last_fg_color != *fg);
     if (!put_bg && !put_fg) {
@@ -230,11 +269,9 @@ void TerminalIO::SetColor(std::optional<color_t> bg, std::optional<color_t> fg) 
 TerminalIO::~TerminalIO() { RestoreTerminal(); }
 
 static const std::map<uint32_t, std::string> SPECIAL_KEYCODES{
-    {0x01, "C-a"},
-    {0x02, "C-b"},        {0x03, "C-c"},        {0x04, "C-d"},         {0x05, "C-e"},
-    {0x06, "C-f"},          {0x07, "C-g"},
-    {0x08, "C-h"}, {0x09, "C-i"}, {0x0A, "C-j"}, {0x0B, "C-k"}, {0x0C, "C-l"},
-    {'<', "LT"},          {'>', "GT"},           {0x800000d0, "F1"},
+    {0x01, "C-a"},          {0x02, "C-b"},        {0x03, "C-c"},        {0x04, "C-d"},         {0x05, "C-e"},
+    {0x06, "C-f"},          {0x07, "C-g"},        {0x08, "C-h"},        {0x09, "C-i"},         {0x0A, "C-j"},
+    {0x0B, "C-k"},          {0x0C, "C-l"},        {'<', "LT"},          {'>', "GT"},           {0x800000d0, "F1"},
     {0x800000d1, "F2"},     {0x800000d2, "F3"},   {0x800000d3, "F4"},   {0x4000fab1, "F5"},    {0x4000faf1, "F6"},
     {0x4000fb11, "F7"},     {0x4000fb31, "F8"},   {0x4000fa12, "F9"},   {0x4000fa32, "F10"},   {0x4000fa72, "F11"},
     {0x4000fa92, "F12"},    {0x40085771, "C-F1"}, {0x4008d771, "C-F2"}, {0x40084b71, "S-F1"},  {0x40084f71, "M-F1"},
@@ -242,7 +279,8 @@ static const std::map<uint32_t, std::string> SPECIAL_KEYCODES{
     {0x400007d2, "Ins"},    {0x400007d3, "Del"},
 };
 
-std::string KeyCodeToString(uint32_t keycode, char special_delim_left, char special_delim_right) {
+std::string
+KeyCodeToString(uint32_t keycode, char special_delim_left, char special_delim_right) {
     auto it = SPECIAL_KEYCODES.find(keycode);
     if (it != SPECIAL_KEYCODES.end()) {
         return special_delim_left + it->second + special_delim_right;
