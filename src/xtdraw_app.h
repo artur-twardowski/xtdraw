@@ -2,6 +2,7 @@
 #define XTDRAW_APP_H
 
 #include "board.h"
+#include "colors.h"
 #include "terminal_io.h"
 
 namespace xtdraw {
@@ -20,6 +21,7 @@ class App {
     void       RedrawCharacterPicker(bool active);
     void       GetCharacterSubset(std::vector<uint32_t> &chars, bool &double_width, std::string &subset_name,
                                   size_t set_index);
+    Colors     colors;
     TerminalIO terminal_io;
     Board      board;
 

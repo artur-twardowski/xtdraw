@@ -11,7 +11,8 @@ set(XTDRAW_SOURCES
     src/xtdraw_app.cpp
     src/terminal_io.cpp
     src/board.cpp
-    src/charset.cpp)
+    src/charset.cpp
+    src/colors.cpp)
 
 # Create executable
 add_executable(${CMAKE_PROJECT_NAME} ${XTDRAW_SOURCES})
