@@ -1,6 +1,7 @@
 #include "board.h"
 #include "charset.h"
 #include "terminal_io.h"
+#include <map>
 
 Board::Board(const BoxDimensions &viewport, uint16_t width, uint16_t height)
     : window(viewport), width(width), height(height) {
@@ -21,24 +22,15 @@ void Board::SetCell(uint32_t character, uint8_t bg_color, uint8_t fg_color) {
 void Board::TogglePixel() {
     auto   &element = grid[cursor_y * width + cursor_x];
     uint8_t bit     = (1 << (cursor_sy * 2 + cursor_sx));
+    const std::map<CursorMode, box_drawing_t> kBoxDrawingModes = {
+        {CursorMode::BLK_2x2, box_drawing_t::BLK_2x2},
+        {CursorMode::BLK_2x3, box_drawing_t::BLK_2x3},
+        {CursorMode::BLK_2x4, box_drawing_t::BLK_2x4_BRAILLE},
+    };
 
-    // TODO: remove code repetition
-    if (cursor_mode == CursorMode::BLK_2x4) {
-        box_drawing_t box_drawing = box_drawing_t::BLK_2x4_BRAILLE;
-        uint8_t       pix;
-        if (CharacterToPixels(pix, box_drawing, element.character)) {
-            pix ^= bit;
-            element.character = GetBlockDrawingCharacter(pix, box_drawing);
-        }
-    } else if (cursor_mode == CursorMode::BLK_2x3) {
-        box_drawing_t box_drawing = box_drawing_t::BLK_2x3;
-        uint8_t       pix;
-        if (CharacterToPixels(pix, box_drawing, element.character)) {
-            pix ^= bit;
-            element.character = GetBlockDrawingCharacter(pix, box_drawing);
-        }
-    } else if (cursor_mode == CursorMode::BLK_2x2) {
-        box_drawing_t box_drawing = box_drawing_t::BLK_2x2;
+    auto it = kBoxDrawingModes.find(cursor_mode);
+    if (it != kBoxDrawingModes.end()) {
+        box_drawing_t box_drawing = it->second;
         uint8_t       pix;
         if (CharacterToPixels(pix, box_drawing, element.character)) {
             pix ^= bit;
