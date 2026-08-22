@@ -58,6 +58,20 @@ void App::ProcessInput(uint32_t keycode) {
         redraw_board       = true;
         redraw_cursor_info = true;
     };
+    auto toggle_character_or_pixel = [&]() {
+        if (board.GetCursorMode() == Board::CursorMode::ENTIRE_CHARACTER) {
+            uint32_t current_char = board.GetCellUnderCursor().character;
+            uint32_t selected_char = GetActiveCharacter();
+            if (current_char != selected_char) {
+                board.SetCell(selected_char);
+            } else {
+                board.SetCell(' ');
+            }
+        } else {
+            board.TogglePixel();
+        }
+        redraw_board = true;
+    };
 
     const std::string seq_str = KeyCodeToString(keycode);
     if (seq_str == "q" || seq_str == "Q") {
@@ -93,17 +107,7 @@ void App::ProcessInput(uint32_t keycode) {
     } else if (seq_str == "<F4>") {
         change_cursor_mode(Board::CursorMode::BLK_2x4);
     } else if (seq_str == " ") {
-        if (board.GetCursorMode() == Board::CursorMode::ENTIRE_CHARACTER) {
-            uint32_t c = board.GetCellUnderCursor().character;
-            if (c == ' ') {
-                board.SetCell('X');
-            } else {
-                board.SetCell(' ');
-            }
-        } else {
-            board.TogglePixel();
-        }
-        redraw_board = true;
+        toggle_character_or_pixel();
     } else {
         auto it = kInsertChar.find(seq_str);
         if (it != kInsertChar.end()) {
@@ -178,7 +182,7 @@ void App::RedrawCursorInfo() {
 }
 
 void App::GetCharacterSubset(std::vector<uint32_t> &chars, bool &double_width, std::string &subset_name,
-                             size_t set_index) {
+                             size_t set_index) const {
     struct SetDescriptor {
         std::string                                name;
         bool                                       double_width{false};
@@ -243,5 +247,12 @@ void App::OnTerminationSignal() {
 }
 
 void App::OnResizeSignal() {}
+uint32_t App::GetActiveCharacter() const {
+    std::vector<uint32_t> active_set;
+    bool _b;
+    std::string _s;
+    GetCharacterSubset(active_set, _b, _s, active_set_ix);
+    return active_set[picker_char_ix];
+}
 
 }  // namespace xtdraw
