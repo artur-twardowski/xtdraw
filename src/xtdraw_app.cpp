@@ -18,6 +18,11 @@ App::App() :
     for (uint8_t ix = 0; ix < quick_select_chars.size(); ix++) {
         quick_select_chars[ix] = {0, static_cast<uint16_t>('A' + ix)};
     }
+    quick_select_chars[0] = {0, 12};
+    quick_select_chars[1] = {0, 0};
+    quick_select_chars[2] = {0, 16};
+    quick_select_chars[3] = {0, 2};
+    quick_select_chars[5] = {0, 6};
 }
 bool App::Init() {
     if (!terminal_io.EnableRawMode()) {
@@ -329,24 +334,19 @@ void App::RedrawCharacterPicker(bool active) {
     for (size_t y = 0; y < 8; y++) {
         terminal_io.SetCursorPosition(83, y + 1);
         for (size_t x = 0; x < chars_in_row; x++) {
+            uint32_t ix = y * chars_in_row + x;
+            uint32_t ch = active_set[ix];
+
             if (y * chars_in_row + x == picker_char_ix) {
-                SetColor(terminal_io, active ? colors.char_picker_cursor
+                SetColor(terminal_io, (active && ch != '\0') ? colors.char_picker_cursor
                                              : colors.char_picker_inactive_cursor);
             } else {
-                SetColor(terminal_io, active ? colors.char_picker_normal
+                SetColor(terminal_io, (active && ch != '\0') ? colors.char_picker_normal
                                              : colors.char_picker_inactive);
             }
-            uint32_t ix = y * chars_in_row + x;
-            if (ix < active_set.size()) {
-                uint32_t ch = active_set[ix];
-                if (ch >= ' ') {
-                    terminal_io.Write(ch);
-                    if (double_width) {
-                        terminal_io.Write(' ');
-                    }
-                } else {
-                    terminal_io.Write(' ');
-                }
+            terminal_io.Write((ch >= ' ') ? ch : ' ');
+            if (double_width) {
+                terminal_io.Write(' ');
             }
         }
     }

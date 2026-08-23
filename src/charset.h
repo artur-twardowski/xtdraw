@@ -21,6 +21,11 @@ struct box_drawing_spec_t {
     uint8_t attributes{0};
 };
 
+enum struct UnicodeVersion {
+    V1_0 = 0,
+    V13_0
+};
+
 uint32_t GetBoxDrawingCharacter(const box_drawing_spec_t &spec);
 
 uint32_t GetBlockDrawingCharacter(uint8_t pixels, box_drawing_t set);
