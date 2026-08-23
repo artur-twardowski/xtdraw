@@ -5,6 +5,7 @@
 
 #include <cstddef>
 #include <vector>
+#include "colors.h"
 
 class TerminalIO;
 
@@ -32,7 +33,8 @@ class Board {
     enum struct CursorMode { ENTIRE_CHARACTER, BLK_2x2, BLK_2x3, BLK_2x4 };
     Board(const BoxDimensions &viewport, uint16_t width = 80, uint16_t height = 25);
 
-    void SetCell(uint32_t character, uint8_t bg_color = 0, uint8_t fg_color = 15);
+    void SetCell(uint32_t character);
+    void SetCellColor(const xtdraw::ColorPair &color);
     void TogglePixel();
     bool IsTogglingAvailable() const;
 

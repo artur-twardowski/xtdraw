@@ -13,11 +13,11 @@ std::string KeyCodeToString(uint32_t keycode, char special_delim_left = '<', cha
 
 class TerminalIO {
    public:
-    struct rgb_t {
+    struct RGB {
         uint8_t r, g, b;
     };
-    enum struct color_mode_t { COLOR_7, COLOR_256, COLOR_RGB };
-    typedef std::variant<uint8_t, rgb_t> color_t;
+    enum struct ColorMode { COLOR_8, COLOR_256, COLOR_RGB };
+    typedef std::variant<uint8_t, RGB> Color;
     explicit TerminalIO(std::ostream &os) : out_stream(os), last_bg_color(uint8_t{0}), last_fg_color(uint8_t{15}) {}
 
     bool     EnableRawMode();
@@ -32,7 +32,7 @@ class TerminalIO {
     void SetCursorPosition(int col, int row);
     void ShowCursor();
     void HideCursor();
-    void SetColor(std::optional<color_t> bg, std::optional<color_t> fg);
+    void SetColor(std::optional<Color> bg, std::optional<Color> fg);
 
     // Destructor to ensure cleanup
     ~TerminalIO();
@@ -42,8 +42,8 @@ class TerminalIO {
     std::ostream &out_stream;
     termios       original_termios{};
     bool          raw_mode_enabled = false;
-    color_t       last_bg_color, last_fg_color;
-    color_mode_t  color_mode;
+    Color       last_bg_color, last_fg_color;
+    ColorMode  color_mode;
 };
 
 #endif  // TERMINAL_IO_H

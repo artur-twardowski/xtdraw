@@ -4,7 +4,9 @@
 #include <iomanip>
 #include <map>
 #include <sstream>
+#include <variant>
 
+#include "colors.h"
 #include "xtdraw_app.h"
 #include "charset.h"
 
@@ -31,6 +33,7 @@ bool App::Run() {
 
         RedrawBoard(draw_frame);
         RedrawCursorInfo();
+        RedrawColorPicker();
 
         ProcessInput(terminal_io.ReadKey());
         usleep(10000);
@@ -68,6 +71,17 @@ void App::ProcessInput(uint32_t keycode) {
         }
         redraw_board = true;
     };
+    auto change_color = [&](TerminalIO::Color &c, int8_t delta) {
+        if (std::holds_alternative<uint8_t>(c)) {
+            auto &cv = std::get<uint8_t>(c);
+            if (delta > 0) {
+                cv++;
+            } else {
+                cv--;
+            }
+        }
+        redraw_color_picker = true;
+    };
 
     const std::string seq_str = KeyCodeToString(keycode);
     const bool dbl_width = IsCharacterSetDoubleWidth(active_set_ix);
@@ -85,10 +99,18 @@ void App::ProcessInput(uint32_t keycode) {
         move_cursor(-1, 0);
     } else if (seq_str == "<Right>" || seq_str == "l") {
         move_cursor(1, 0);
-    } else if (seq_str == "[") {
+    } else if (seq_str == "{") {
         if (active_set_ix > 0) active_set_ix--;
-    } else if (seq_str == "]") {
+    } else if (seq_str == "}") {
         active_set_ix++;
+    } else if (seq_str == ";") {
+        change_color(active_color.foreground, -1);
+    } else if (seq_str == ":") {
+        change_color(active_color.background, -1);
+    } else if (seq_str == "'") {
+        change_color(active_color.foreground, 1);
+    } else if (seq_str == "\"") {
+        change_color(active_color.background, 1);
     } else if (seq_str == "H") {
         picker_char_ix = (picker_char_ix - 1) & picker_mask;
     } else if (seq_str == "L") {
@@ -107,6 +129,7 @@ void App::ProcessInput(uint32_t keycode) {
         change_cursor_mode(Board::CursorMode::BLK_2x4);
     } else if (seq_str == " ") {
         toggle_character_or_pixel();
+        board.SetCellColor(active_color);
     }
 }
 
@@ -171,6 +194,102 @@ void App::RedrawCursorInfo() {
         terminal_io.Write(os.str());
         terminal_io.Write(ch);
         redraw_cursor_info = false;
+    }
+}
+
+void App::RedrawColorPicker() {
+    uint16_t top_row           = 16;
+    auto     is_selected_color = [](const TerminalIO::Color &color, uint8_t selection) {
+        if (std::holds_alternative<uint8_t>(color)) {
+            return selection == std::get<uint8_t>(color);
+        }
+        return false;
+    };
+    auto is_selected_color_component = [](const TerminalIO::Color &color, char component,
+                                          uint8_t component_value) {
+        if (std::holds_alternative<uint8_t>(color)) {
+            uint8_t c = std::get<uint8_t>(color);
+            if (c >= 16 && c < 232) {
+                c -= 16;
+                uint8_t r = c % 6;
+                uint8_t g = (c / 6) % 6;
+                uint8_t b = (c / 36) % 6;
+
+                return (component == 'R' && r == component_value) ||
+                       (component == 'G' && g == component_value) ||
+                       (component == 'B' && b == component_value);
+            } else {
+                return false;
+            }
+        }
+        return false;
+    };
+    auto print_mark = [&](uint8_t selection) -> std::string {
+        bool selected_bg = is_selected_color(active_color.background, selection);
+        bool selected_fg = is_selected_color(active_color.foreground, selection);
+        if (selected_bg) {
+            return selected_fg ? "X" : "B";
+        } else {
+            return selected_fg ? "F" : " ";
+        }
+    };
+    if (redraw_color_picker) {
+        // ROW 1
+        terminal_io.SetCursorPosition(0, top_row);
+        for (uint8_t c = 0; c < 16; c++) {
+            SetColor(terminal_io, {uint8_t(c), uint8_t{15}});
+            terminal_io.Write(" " + print_mark(c) + " ");
+        }
+        SetColor(terminal_io, {uint8_t{0}, uint8_t{0}});
+        terminal_io.Write("    ");
+        SetColor(terminal_io, active_color);
+        terminal_io.Write("    ");
+
+        terminal_io.SetCursorPosition(0, top_row + 1);
+        for (uint8_t c = 0; c < 24; c++) {
+            uint8_t ccode = Xterm256Gray(c);
+            SetColor(terminal_io, {ccode, c < 16 ? Xterm256Gray(23) : Xterm256Gray(0)});
+            terminal_io.Write(print_mark(ccode) + " ");
+        }
+        SetColor(terminal_io, {uint8_t{0}, uint8_t{0}});
+        terminal_io.Write("    ");
+        SetColor(terminal_io, active_color);
+        terminal_io.Write("-\u2588\u2588-");
+        terminal_io.SetCursorPosition(0, top_row + 2);
+
+        for (const char &component : {'R', 'G', 'B'}) {
+            SetColor(terminal_io, {uint8_t{0}, Xterm256RGB(component == 'R' ? 5 : 0,
+                                                           component == 'G' ? 5 : 0,
+                                                           component == 'B' ? 5 : 0)});
+            terminal_io.Write(component);
+            terminal_io.Write('[');
+            for (uint8_t intensity = 0; intensity < 6; intensity++) {
+                TerminalIO::Color ccode = Xterm256RGB(component == 'R' ? intensity : 0,
+                                                      component == 'G' ? intensity : 0,
+                                                      component == 'B' ? intensity : 0);
+                SetColor(terminal_io, {ccode, uint8_t(255)});
+                bool selected_bg = is_selected_color_component(active_color.background,
+                                                               component, intensity);
+                bool selected_fg = is_selected_color_component(active_color.foreground,
+                                                               component, intensity);
+                if (selected_bg) {
+                    terminal_io.Write(selected_fg ? "X " : "B ");
+                } else {
+                    terminal_io.Write(selected_fg ? "F " : "  ");
+                }
+            }
+            SetColor(terminal_io, {uint8_t{0}, Xterm256RGB(component == 'R' ? 5 : 0,
+                                                           component == 'G' ? 5 : 0,
+                                                           component == 'B' ? 5 : 0)});
+            terminal_io.Write("]  ");
+        }
+        SetColor(terminal_io, {uint8_t{0}, uint8_t{0}});
+        terminal_io.Write(" ");
+        SetColor(terminal_io, active_color);
+        terminal_io.Write("    ");
+        terminal_io.SetCursorPosition(0, top_row + 2);
+
+        redraw_color_picker = false;
     }
 }
 

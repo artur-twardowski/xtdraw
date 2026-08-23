@@ -12,11 +12,15 @@ Board::Board(const BoxDimensions &viewport, uint16_t width, uint16_t height)
     cursor_y  = 0;
 }
 
-void Board::SetCell(uint32_t character, uint8_t bg_color, uint8_t fg_color) {
+void Board::SetCell(uint32_t character) {
     auto &element            = grid[cursor_y * width + cursor_x];
     element.character        = character;
-    element.background_color = bg_color;
-    element.foreground_color = fg_color;
+}
+
+void Board::SetCellColor(const xtdraw::ColorPair &color) {
+    auto &element            = grid[cursor_y * width + cursor_x];
+    element.background_color = std::get<uint8_t>(color.background);
+    element.foreground_color = std::get<uint8_t>(color.foreground);
 }
 
 void Board::TogglePixel() {

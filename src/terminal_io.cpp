@@ -17,8 +17,8 @@ ExtractBits(uint32_t in, uint8_t lsb, uint8_t count) {
 }
 
 bool
-operator==(const TerminalIO::color_t &c1, const TerminalIO::color_t &c2) {
-    using rgb_t = TerminalIO::rgb_t;
+operator==(const TerminalIO::Color &c1, const TerminalIO::Color &c2) {
+    using rgb_t = TerminalIO::RGB;
     if (std::holds_alternative<uint8_t>(c1) && std::holds_alternative<uint8_t>(c2)) {
         return std::get<uint8_t>(c1) == std::get<uint8_t>(c2);
     } else if (std::holds_alternative<rgb_t>(c1) && std::holds_alternative<rgb_t>(c2)) {
@@ -31,7 +31,7 @@ operator==(const TerminalIO::color_t &c1, const TerminalIO::color_t &c2) {
 }
 
 bool
-operator!=(const TerminalIO::color_t &c1, const TerminalIO::color_t &c2) {
+operator!=(const TerminalIO::Color &c1, const TerminalIO::Color &c2) {
     return !(c1 == c2);
 }
 
@@ -245,7 +245,7 @@ TerminalIO::Flush() {
 }
 
 void
-TerminalIO::SetColor(std::optional<color_t> bg, std::optional<color_t> fg) {
+TerminalIO::SetColor(std::optional<Color> bg, std::optional<Color> fg) {
     bool put_bg = (bg.has_value() && last_bg_color != *bg);
     bool put_fg = (fg.has_value() && last_fg_color != *fg);
     if (!put_bg && !put_fg) {

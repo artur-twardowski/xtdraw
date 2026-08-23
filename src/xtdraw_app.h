@@ -20,16 +20,19 @@ class App {
     void       RedrawCursorInfo();
     void       RedrawCharacterPicker(bool active);
     uint32_t   GetActiveCharacter() const;
+    void       RedrawColorPicker();
     Colors     colors;
     TerminalIO terminal_io;
     Board      board;
 
     bool redraw_board{true};
     bool redraw_cursor_info{true};
+    bool redraw_color_picker{true};
     bool app_running{true};
 
     uint16_t picker_char_ix{0};
     uint16_t active_set_ix{0};
+    ColorPair active_color{uint8_t{0}, uint8_t{255}};
 };
 }  // namespace xtdraw
 
