@@ -1,11 +1,44 @@
 #include <assert.h>
 #include <stdlib.h>
+#include <vector>
 
 #include <array>
 #include <iostream>
 #include <map>
 
 #include "charset.h"
+
+struct SetDescriptor {
+    std::string                                name;
+    bool                                       double_width{false};
+    std::vector<std::pair<uint32_t, uint32_t>> subsets;
+};
+
+const std::vector<SetDescriptor> kSets = {
+    {.name = "ASCII and Latin-1", .subsets = {
+        {32, 126}, {161, 0xAC}, {0xAE, 0xFF},
+        {0xFB00, 0xFB06}
+    }},
+    {.name = "Latin Ext-A + IPA", .subsets = {
+        {0x100, 0x17F},
+        {0x250, 0x2af},
+    }},
+    {.name = "Latin Extended-B", .subsets = {{0x180, 0x24F}}},
+    {.name = "Latin Extended Add.", .subsets = {{0x1e00, 0x1eff}}},
+    {.name = "Greek", .subsets = {{0x370, 0x3ff}}},
+    {.name = "Cyrillic", .subsets = {{0x400, 0x4ff}}},
+    {.name = "Extra chars", .subsets = {{0x2400, 0x2459}}},
+    {.name = "Number bullet points", .double_width = true, 
+        .subsets = {
+            {0x24ea, 0x24ea}, {0x2460, 0x246e},
+            {0x20, 0x20}, {0x246f, 0x2473}, {0x3251, 0x325a},
+            {0x20, 0x20}, {0x325b, 0x325f}, {0x32b1, 0x32ba}
+
+        }},
+    {.name = "Box/Block Drawing", .subsets = {{0x2500, 0x259f}}},
+    {.name = "Box/Block Drawing 2", .double_width = true, .subsets = {{0x25a0, 0x25ff}}},
+    {.name = "Braille", .subsets = {{0x2800, 0x28ff}}},
+};
 
 uint32_t GetBoxDrawingCharacter(const box_drawing_spec_t &s) {
     // clang-format off
@@ -182,4 +215,33 @@ bool CharacterToPixels(uint8_t &pixels, box_drawing_t set, uint32_t ch) {
         }
     }
     return false;
+}
+
+static void PopulateSet(std::vector<uint32_t> &chars, const SetDescriptor &set) {
+    size_t ins_ix = 0;
+    chars.resize(set.double_width ? 128 : 256);
+    for (const auto &[subset_lo, subset_hi] : set.subsets) {
+        for (size_t ix = subset_lo; ix <= subset_hi; ix++) {
+            assert(ins_ix < chars.size());
+            chars[ins_ix++] = ix;
+        }
+    }
+}
+
+void GetCharacterSubset(std::vector<uint32_t> &chars, size_t set_index) {
+    const auto &set = set_index < kSets.size() ? kSets[set_index] : kSets[0];
+    PopulateSet(chars, set);
+}
+
+void GetCharacterSubset(std::vector<uint32_t> &chars, bool &double_width,
+                        std::string &subset_name, size_t set_index) {
+    const auto &set = set_index < kSets.size() ? kSets[set_index] : kSets[0];
+    PopulateSet(chars, set);
+    double_width = set.double_width;
+    subset_name  = set.name;
+}
+
+bool IsCharacterSetDoubleWidth(size_t set_index) {
+    const auto &set = set_index < kSets.size() ? kSets[set_index] : kSets[0];
+    return set.double_width;
 }

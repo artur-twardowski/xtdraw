@@ -6,6 +6,7 @@
 #include <sstream>
 
 #include "xtdraw_app.h"
+#include "charset.h"
 
 namespace xtdraw {
 App::App() : terminal_io(std::cout), board({0, 0, 80, 16}, 128, 64) {}
@@ -38,11 +39,6 @@ bool App::Run() {
 }
 
 void App::ProcessInput(uint32_t keycode) {
-    static const std::map<std::string, uint32_t> kInsertChar{
-        {"0", ' '},     {"1", 0x1fb00}, {"2", 0x1fb01}, {"3", 0x1fb02}, {"4", 0x1fb03},
-        {"5", 0x1fb04}, {"!", 0x256d},  {"@", 0x252c},  {"#", 0x256e},  {"$", 0x251c},
-        {"%", 0x253c},  {"^", 0x2524},  {"&", 0x2570},  {"*", 0x2534},  {"(", 0x256f},
-    };
     // Handle special keys and printable characters
     if (!keycode) {
         return;
@@ -74,6 +70,9 @@ void App::ProcessInput(uint32_t keycode) {
     };
 
     const std::string seq_str = KeyCodeToString(keycode);
+    const bool dbl_width = IsCharacterSetDoubleWidth(active_set_ix);
+    size_t picker_vertical_step = dbl_width ? 16 : 32;
+    uint8_t picker_mask = dbl_width ? 0x7f : 0xff;
     if (seq_str == "q" || seq_str == "Q") {
         // Exit the application
         OnTerminationSignal();
@@ -91,13 +90,13 @@ void App::ProcessInput(uint32_t keycode) {
     } else if (seq_str == "]") {
         active_set_ix++;
     } else if (seq_str == "H") {
-        picker_char_ix = (picker_char_ix - 1) & 0xFF;
+        picker_char_ix = (picker_char_ix - 1) & picker_mask;
     } else if (seq_str == "L") {
-        picker_char_ix = (picker_char_ix + 1) & 0xFF;
+        picker_char_ix = (picker_char_ix + 1) & picker_mask;
     } else if (seq_str == "J") {
-        picker_char_ix = (picker_char_ix + 32) & 0xFF;
+        picker_char_ix = (picker_char_ix + picker_vertical_step) & picker_mask;
     } else if (seq_str == "K") {
-        picker_char_ix = (picker_char_ix - 32) & 0xFF;
+        picker_char_ix = (picker_char_ix - picker_vertical_step) & picker_mask;
     } else if (seq_str == "<F1>") {
         change_cursor_mode(Board::CursorMode::ENTIRE_CHARACTER);
     } else if (seq_str == "<F2>") {
@@ -108,12 +107,6 @@ void App::ProcessInput(uint32_t keycode) {
         change_cursor_mode(Board::CursorMode::BLK_2x4);
     } else if (seq_str == " ") {
         toggle_character_or_pixel();
-    } else {
-        auto it = kInsertChar.find(seq_str);
-        if (it != kInsertChar.end()) {
-            board.SetCell(it->second);
-            redraw_board = true;
-        }
     }
 }
 
@@ -181,31 +174,6 @@ void App::RedrawCursorInfo() {
     }
 }
 
-void App::GetCharacterSubset(std::vector<uint32_t> &chars, bool &double_width, std::string &subset_name,
-                             size_t set_index) const {
-    struct SetDescriptor {
-        std::string                                name;
-        bool                                       double_width{false};
-        std::vector<std::pair<uint32_t, uint32_t>> subsets;
-    };
-    const std::vector<SetDescriptor> kSets = {
-        {.name = "ASCII and Latin-1", .subsets = {{32, 126}, {161, 0xAC}, {0xAE, 255}}},
-        {.name = "Greek", .subsets = {{0x370, 0x3ff}}},
-        {.name = "Cyrillic", .subsets = {{0x400, 0x4ff}}},
-        {.name = "Braille", .subsets = {{0x2800, 0x28ff}}},
-    };
-    chars.resize(256);
-    const auto &set    = set_index < kSets.size() ? kSets[set_index] : kSets[0];
-    size_t      ins_ix = 0;
-    for (const auto &[subset_lo, subset_hi] : set.subsets) {
-        for (size_t ix = subset_lo; ix <= subset_hi; ix++) {
-            chars[ins_ix++] = ix;
-        }
-    }
-    double_width = set.double_width;
-    subset_name  = set.name;
-}
-
 void App::RedrawCharacterPicker(bool active) {
     std::vector<uint32_t> active_set;
     bool                  double_width;
@@ -214,19 +182,23 @@ void App::RedrawCharacterPicker(bool active) {
     terminal_io.SetCursorPosition(83, 0);
     SetColor(terminal_io, colors.char_picker_header);
     terminal_io.Write(subset_name, 32);
+    const size_t chars_in_row = double_width ? 16 : 32;
     for (size_t y = 0; y < 8; y++) {
         terminal_io.SetCursorPosition(83, y + 1);
-        for (size_t x = 0; x < 32; x++) {
-            if (y * 32 + x == picker_char_ix) {
+        for (size_t x = 0; x < chars_in_row; x++) {
+            if (y * chars_in_row + x == picker_char_ix) {
                 SetColor(terminal_io, active ? colors.char_picker_cursor : colors.char_picker_inactive_cursor);
             } else {
                 SetColor(terminal_io, active ? colors.char_picker_normal : colors.char_picker_inactive);
             }
-            uint32_t ix = y * 32 + x;
+            uint32_t ix = y * chars_in_row + x;
             if (ix < active_set.size()) {
                 uint32_t ch = active_set[ix];
                 if (ch >= ' ') {
                     terminal_io.Write(ch);
+                    if (double_width) {
+                        terminal_io.Write(' ');
+                    }
                 } else {
                     terminal_io.Write(' ');
                 }

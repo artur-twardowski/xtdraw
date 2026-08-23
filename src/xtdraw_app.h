@@ -19,9 +19,7 @@ class App {
     void       RedrawBoard(uint32_t draw_frame);
     void       RedrawCursorInfo();
     void       RedrawCharacterPicker(bool active);
-    void       GetCharacterSubset(std::vector<uint32_t> &chars, bool &double_width, std::string &subset_name,
-                                  size_t set_index) const;
-    uint32_t GetActiveCharacter() const;
+    uint32_t   GetActiveCharacter() const;
     Colors     colors;
     TerminalIO terminal_io;
     Board      board;
