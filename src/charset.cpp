@@ -245,3 +245,10 @@ bool IsCharacterSetDoubleWidth(size_t set_index) {
     const auto &set = set_index < kSets.size() ? kSets[set_index] : kSets[0];
     return set.double_width;
 }
+
+uint32_t GetCharFromSubset(uint16_t set_index, uint16_t char_index) {
+    const auto &set = set_index < kSets.size() ? kSets[set_index] : kSets[0];
+    std::vector<uint32_t> chars;
+    PopulateSet(chars, set);
+    return chars[char_index];
+}

@@ -4,6 +4,7 @@
 #include "board.h"
 #include "colors.h"
 #include "terminal_io.h"
+#include <array>
 
 namespace xtdraw {
 class App {
@@ -30,9 +31,17 @@ class App {
     bool redraw_color_picker{true};
     bool app_running{true};
 
+    struct QuickSelectCharacter {
+        uint16_t set_index{0};
+        uint16_t char_index{0};
+    };
+
     uint16_t picker_char_ix{0};
     uint16_t active_set_ix{0};
     ColorPair active_color{uint8_t{0}, uint8_t{255}};
+    std::string last_char;
+
+    std::array<QuickSelectCharacter, 20> quick_select_chars;
 };
 }  // namespace xtdraw
 

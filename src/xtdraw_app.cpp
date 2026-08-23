@@ -11,7 +11,14 @@
 #include "charset.h"
 
 namespace xtdraw {
-App::App() : terminal_io(std::cout), board({0, 0, 80, 16}, 128, 64) {}
+App::App() : 
+    terminal_io(std::cout),
+    board({0, 0, 80, 16}, 128, 64)
+{
+    for (uint8_t ix = 0; ix < quick_select_chars.size(); ix++) {
+        quick_select_chars[ix] = {0, static_cast<uint16_t>('A' + ix)};
+    }
+}
 bool App::Init() {
     if (!terminal_io.EnableRawMode()) {
         std::cerr << "Failed to enable raw mode\n";
@@ -35,6 +42,10 @@ bool App::Run() {
         RedrawCursorInfo();
         RedrawColorPicker();
 
+        SetColor(terminal_io, colors.cursor_info);
+        terminal_io.SetCursorPosition(83, 19);
+        terminal_io.Write(last_char, 20);
+
         ProcessInput(terminal_io.ReadKey());
         usleep(10000);
     }
@@ -42,6 +53,12 @@ bool App::Run() {
 }
 
 void App::ProcessInput(uint32_t keycode) {
+    static const std::map<std::string, size_t> kQuickSelectKeys = {
+        {"1", 0}, {"2", 1}, {"3", 2}, {"4", 3}, {"5", 4},
+        {"6", 5}, {"7", 6}, {"8", 7}, {"9", 8}, {"0", 9},
+        {"!", 10}, {"@", 11}, {"#", 12}, {"$", 13}, {"%", 14},
+        {"^", 15}, {"&", 16}, {"*", 17}, {"(", 18}, {")", 19},
+    };
     // Handle special keys and printable characters
     if (!keycode) {
         return;
@@ -130,7 +147,14 @@ void App::ProcessInput(uint32_t keycode) {
     } else if (seq_str == " ") {
         toggle_character_or_pixel();
         board.SetCellColor(active_color);
+    } else if (kQuickSelectKeys.find(seq_str) != kQuickSelectKeys.end()) {
+        auto qsc = quick_select_chars[kQuickSelectKeys.at(seq_str)];
+        if (board.GetCursorMode() == Board::CursorMode::ENTIRE_CHARACTER) {
+            board.SetCell(GetCharFromSubset(qsc.set_index, qsc.char_index));
+        }
+        
     }
+    last_char = seq_str;
 }
 
 void App::RedrawBoard(uint32_t draw_frame) {
@@ -154,7 +178,7 @@ void App::RedrawCursorInfo() {
         uint8_t  csx, csy;
         board.GetCursorPosition(cx, cy, csx, csy);
 
-        terminal_io.SetCursorPosition(83, 12);
+        terminal_io.SetCursorPosition(83, 15);
         SetColor(terminal_io, colors.cursor_info);
         const auto cursor_mode = board.GetCursorMode();
         if (cursor_mode == Board::CursorMode::ENTIRE_CHARACTER) {
@@ -306,9 +330,11 @@ void App::RedrawCharacterPicker(bool active) {
         terminal_io.SetCursorPosition(83, y + 1);
         for (size_t x = 0; x < chars_in_row; x++) {
             if (y * chars_in_row + x == picker_char_ix) {
-                SetColor(terminal_io, active ? colors.char_picker_cursor : colors.char_picker_inactive_cursor);
+                SetColor(terminal_io, active ? colors.char_picker_cursor
+                                             : colors.char_picker_inactive_cursor);
             } else {
-                SetColor(terminal_io, active ? colors.char_picker_normal : colors.char_picker_inactive);
+                SetColor(terminal_io, active ? colors.char_picker_normal
+                                             : colors.char_picker_inactive);
             }
             uint32_t ix = y * chars_in_row + x;
             if (ix < active_set.size()) {
@@ -329,6 +355,24 @@ void App::RedrawCharacterPicker(bool active) {
     std::ostringstream line;
     line << std::hex << std::setw(8) << active_set[picker_char_ix];
     terminal_io.Write(line.str(), 10);
+
+    static const char kKeys[] = {'1', '2', '3', '4', '5', '6', '7', '8', '9', '0'};
+
+    for (uint8_t row = 0; row < 3; row++) {
+        terminal_io.SetCursorPosition(84, 11 + row);
+        for (uint8_t col = 0; col < 10; col++) {
+            terminal_io.Write(' ');
+            if (row == 2) {
+                terminal_io.Write(kKeys[col]);
+            } else {
+                std::vector<uint32_t> chars;
+                const auto           &qsc = quick_select_chars[(row == 0 ? 10 : 0) + col];
+                GetCharacterSubset(chars, qsc.set_index);
+                terminal_io.Write(chars[qsc.char_index]);
+            }
+            terminal_io.Write(' ');
+        }
+    }
 }
 
 void App::OnTerminationSignal() {

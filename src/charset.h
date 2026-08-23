@@ -29,5 +29,6 @@ void GetCharacterSubset(std::vector<uint32_t> &chars, size_t set_index);
 void GetCharacterSubset(std::vector<uint32_t> &chars, bool &double_width,
                         std::string &subset_name, size_t set_index);
 bool IsCharacterSetDoubleWidth(size_t set_index);
+uint32_t GetCharFromSubset(uint16_t set_index, uint16_t char_index);
 
 #endif
