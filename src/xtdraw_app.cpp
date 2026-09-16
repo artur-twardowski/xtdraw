@@ -7,6 +7,7 @@
 #include <variant>
 
 #include "colors.h"
+#include "terminal_io.h"
 #include "xtdraw_app.h"
 #include "charset.h"
 
@@ -149,6 +150,11 @@ void App::ProcessInput(uint32_t keycode) {
         change_cursor_mode(Board::CursorMode::BLK_2x3);
     } else if (seq_str == "<F4>") {
         change_cursor_mode(Board::CursorMode::BLK_2x4);
+    } else if (seq_str == "x") {
+        TerminalIO::Color tmp = active_color.background;
+        active_color.background = active_color.foreground;
+        active_color.foreground = tmp;
+        redraw_color_picker = true;
     } else if (seq_str == " ") {
         toggle_character_or_pixel();
         board.SetCellColor(active_color);
