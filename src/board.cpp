@@ -12,6 +12,16 @@ Board::Board(const BoxDimensions &viewport, uint16_t width, uint16_t height)
     cursor_y  = 0;
 }
 
+void Board::Reset(uint16_t width, uint16_t height) {
+    grid.resize(width * height);
+    this->width = width;
+    this->height = height;
+}
+
+void Board::SetCell(uint16_t x, uint16_t y, const BoardCell &cell) {
+    grid[y * width + x] = cell;
+}
+
 void Board::SetCell(uint32_t character) {
     auto &element            = grid[cursor_y * width + cursor_x];
     element.character        = character;
@@ -19,8 +29,8 @@ void Board::SetCell(uint32_t character) {
 
 void Board::SetCellColor(const xtdraw::ColorPair &color) {
     auto &element            = grid[cursor_y * width + cursor_x];
-    element.background_color = std::get<uint8_t>(color.background);
-    element.foreground_color = std::get<uint8_t>(color.foreground);
+    element.background_color = color.background;
+    element.foreground_color = color.foreground;
 }
 
 void Board::TogglePixel() {
@@ -101,6 +111,19 @@ void Board::MoveCursor(int16_t x, int16_t y) {
         cursor_y  = cy;
         cursor_sx = 0;
         cursor_sy = 0;
+    }
+
+    if (cursor_x < view_left) {
+        view_left = cursor_x;
+    }
+    if (cursor_y < view_top) {
+        view_top = cursor_y;
+    }
+    if (cursor_x > view_left + window.width - 3) {
+        view_left = cursor_x - window.width + 3;
+    }
+    if (cursor_y > view_top + window.height - 3) {
+        view_top = cursor_y - window.height + 3;
     }
 }
 

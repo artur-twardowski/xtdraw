@@ -7,58 +7,10 @@
 #include <variant>
 
 #include "terminal_io.h"
+#include "utils.h"
 
 static constexpr const char ESC = '\033';
-
-static constexpr uint8_t
-ExtractBits(uint32_t in, uint8_t lsb, uint8_t count) {
-    const uint32_t mask = ((1 << count) - 1) << lsb;
-    return (in & mask) >> lsb;
-}
-
-bool
-operator==(const TerminalIO::Color &c1, const TerminalIO::Color &c2) {
-    using rgb_t = TerminalIO::RGB;
-    if (std::holds_alternative<uint8_t>(c1) && std::holds_alternative<uint8_t>(c2)) {
-        return std::get<uint8_t>(c1) == std::get<uint8_t>(c2);
-    } else if (std::holds_alternative<rgb_t>(c1) && std::holds_alternative<rgb_t>(c2)) {
-        const rgb_t &rgb1 = std::get<rgb_t>(c1);
-        const rgb_t &rgb2 = std::get<rgb_t>(c2);
-        return rgb1.r == rgb2.r && rgb1.g == rgb2.g && rgb1.b == rgb2.b;
-    } else {
-        return false;
-    }
-}
-
-bool
-operator!=(const TerminalIO::Color &c1, const TerminalIO::Color &c2) {
-    return !(c1 == c2);
-}
-
-static std::string
-EncodeUTF8(uint32_t keycode) {
-    char result[5];
-    if (keycode <= 0x7F) {
-        result[0] = ExtractBits(keycode, 0, 7);
-        result[1] = '\0';
-    } else if (keycode <= 0x7FF) {
-        result[0] = 0b11000000 | ExtractBits(keycode, 6, 5);
-        result[1] = 0b10000000 | ExtractBits(keycode, 0, 6);
-        result[2] = '\0';
-    } else if (keycode <= 0xFFFF) {
-        result[0] = 0b11100000 | ExtractBits(keycode, 12, 4);
-        result[1] = 0b10000000 | ExtractBits(keycode, 6, 6);
-        result[2] = 0b10000000 | ExtractBits(keycode, 0, 6);
-        result[3] = '\0';
-    } else if (keycode <= 0x10FFFF) {
-        result[0] = 0b11110000 | ExtractBits(keycode, 18, 3);
-        result[1] = 0b10000000 | ExtractBits(keycode, 12, 6);
-        result[2] = 0b10000000 | ExtractBits(keycode, 6, 6);
-        result[3] = 0b10000000 | ExtractBits(keycode, 0, 6);
-        result[4] = '\0';
-    }
-    return result;
-}
+TerminalIO::TerminalIO(std::ostream &os) : xtdraw::ANSIOutput(os), out_stream(os) {}
 
 bool
 TerminalIO::EnableRawMode() {
@@ -221,11 +173,7 @@ TerminalIO::HideCursor() {
 }
 
 void
-TerminalIO::Write(const std::string &data) {
-    out_stream << data;
-}
-void
-TerminalIO::Write(const std::string &data, size_t window_size) {
+TerminalIO::WriteWindowed(const std::string &data, size_t window_size) {
     if (data.size() < window_size) {
         Write(data);
         for (size_t ix = data.size(); ix < window_size; ix++) {
@@ -236,34 +184,8 @@ TerminalIO::Write(const std::string &data, size_t window_size) {
     }
 }
 void
-TerminalIO::Write(uint32_t character) {
-    out_stream << EncodeUTF8(character);
-}
-void
 TerminalIO::Flush() {
     out_stream.flush();
-}
-
-void
-TerminalIO::SetColor(std::optional<Color> bg, std::optional<Color> fg) {
-    bool put_bg = (bg.has_value() && last_bg_color != *bg);
-    bool put_fg = (fg.has_value() && last_fg_color != *fg);
-    if (!put_bg && !put_fg) {
-        return;
-    }
-    out_stream << ESC << "[";
-    if (put_bg) {
-        out_stream << "48;5;" << (int)std::get<uint8_t>(*bg);
-        last_bg_color = *bg;
-    }
-    if (put_fg) {
-        if (put_bg) {
-            out_stream << ";";
-        }
-        out_stream << "38;5;" << (int)std::get<uint8_t>(*fg);
-        last_fg_color = *fg;
-    }
-    out_stream << "m";
 }
 
 TerminalIO::~TerminalIO() { RestoreTerminal(); }
@@ -288,7 +210,7 @@ KeyCodeToString(uint32_t keycode, char special_delim_left, char special_delim_ri
         return std::string("") + special_delim_left + "x" + char(keycode + 0x20) + special_delim_right;
     }
     if (keycode <= 0x0010FFFF) {
-        return EncodeUTF8(keycode);
+        return xtdraw::EncodeUTF8(keycode);
     } else {
         std::ostringstream os;
         os << special_delim_left << std::hex << std::setw(8) << std::setfill('0') << keycode << special_delim_right;

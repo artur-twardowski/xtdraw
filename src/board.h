@@ -5,6 +5,8 @@
 
 #include <cstddef>
 #include <vector>
+
+#include "ansi_output.h"
 #include "colors.h"
 
 class TerminalIO;
@@ -13,9 +15,9 @@ class TerminalIO;
  * Structure representing a single cell on the board
  */
 struct BoardCell {
-    uint32_t character{' '};        // Unicode character (any Unicode character supported)
-    uint8_t  foreground_color{15};  // Foreground color (0-255)
-    uint8_t  background_color{0};   // Background color (0-255)
+    uint32_t character{' '};  // Unicode character (any Unicode character supported)
+    xtdraw::AbstractANSIOutput::Color foreground_color{uint8_t{255}};
+    xtdraw::AbstractANSIOutput::Color background_color{uint8_t{0}};
 };
 
 struct BoxDimensions {
@@ -32,6 +34,10 @@ class Board {
    public:
     enum struct CursorMode { ENTIRE_CHARACTER, BLK_2x2, BLK_2x3, BLK_2x4 };
     Board(const BoxDimensions &viewport, uint16_t width = 80, uint16_t height = 25);
+
+    void Reset(uint16_t width, uint16_t height);
+
+    void SetCell(uint16_t x, uint16_t y, const BoardCell &cell);
 
     void SetCell(uint32_t character);
     void SetCellColor(const xtdraw::ColorPair &color);

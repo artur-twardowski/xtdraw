@@ -5,11 +5,13 @@
 #include <map>
 #include <sstream>
 #include <variant>
+#include <fstream>
 
 #include "colors.h"
 #include "terminal_io.h"
 #include "xtdraw_app.h"
 #include "charset.h"
+#include "formats/ansi.h"
 
 namespace xtdraw {
 App::App() : 
@@ -50,7 +52,7 @@ bool App::Run() {
 
         SetColor(terminal_io, colors.cursor_info);
         terminal_io.SetCursorPosition(83, 19);
-        terminal_io.Write(last_char, 20);
+        terminal_io.WriteWindowed(last_char, 20);
 
         ProcessInput(terminal_io.ReadKey());
         usleep(10000);
@@ -105,6 +107,19 @@ void App::ProcessInput(uint32_t keycode) {
         }
         redraw_color_picker = true;
     };
+    auto save_board = [&](const std::string &filename) {
+        std::ofstream f(filename, std::ios::out);
+        format::ANSI ansi_file(board);
+        ansi_file.Write(f);
+        f.close();
+    };
+    auto load_board = [&](const std::string &filename) {
+        std::ifstream f(filename, std::ios::in);
+        format::ANSI ansi_file(board);
+        ansi_file.Read(f);
+        f.close();
+        redraw_board = true;
+    };
 
     const std::string seq_str = KeyCodeToString(keycode);
     const bool dbl_width = IsCharacterSetDoubleWidth(active_set_ix);
@@ -155,6 +170,10 @@ void App::ProcessInput(uint32_t keycode) {
         active_color.background = active_color.foreground;
         active_color.foreground = tmp;
         redraw_color_picker = true;
+    } else if (seq_str == "w") {
+        save_board("default.txt");
+    } else if (seq_str == "r") {
+        load_board("default.txt");
     } else if (seq_str == " ") {
         toggle_character_or_pixel();
         board.SetCellColor(active_color);
@@ -196,12 +215,12 @@ void App::RedrawCursorInfo() {
             std::ostringstream line;
             line << std::setw(4) << cx << "  |";
             line << std::setw(4) << cy << "  |";
-            terminal_io.Write(line.str(), 14);
+            terminal_io.WriteWindowed(line.str(), 14);
         } else {
             std::ostringstream line;
             line << std::setw(4) << cx << "." << int(csx) << "|";
             line << std::setw(4) << cy << "." << int(csy) << "|";
-            terminal_io.Write(line.str(), 14);
+            terminal_io.WriteWindowed(line.str(), 14);
         }
         if (cursor_mode == Board::CursorMode::ENTIRE_CHARACTER) {
             SetColor(terminal_io, colors.cursor_mode);
@@ -246,9 +265,9 @@ void App::RedrawColorPicker() {
             uint8_t c = std::get<uint8_t>(color);
             if (c >= 16 && c < 232) {
                 c -= 16;
-                uint8_t r = c % 6;
+                uint8_t r = (c / 36) % 6;
                 uint8_t g = (c / 6) % 6;
-                uint8_t b = (c / 36) % 6;
+                uint8_t b = c % 6;
 
                 return (component == 'R' && r == component_value) ||
                        (component == 'G' && g == component_value) ||
@@ -335,7 +354,7 @@ void App::RedrawCharacterPicker(bool active) {
     GetCharacterSubset(active_set, double_width, subset_name, active_set_ix);
     terminal_io.SetCursorPosition(83, 0);
     SetColor(terminal_io, colors.char_picker_header);
-    terminal_io.Write(subset_name, 32);
+    terminal_io.WriteWindowed(subset_name, 32);
     const size_t chars_in_row = double_width ? 16 : 32;
     for (size_t y = 0; y < 8; y++) {
         terminal_io.SetCursorPosition(83, y + 1);
@@ -360,7 +379,7 @@ void App::RedrawCharacterPicker(bool active) {
     SetColor(terminal_io, colors.char_picker_info);
     std::ostringstream line;
     line << std::hex << std::setw(8) << active_set[picker_char_ix];
-    terminal_io.Write(line.str(), 10);
+    terminal_io.WriteWindowed(line.str(), 10);
 
     static const char kKeys[] = {'1', '2', '3', '4', '5', '6', '7', '8', '9', '0'};
 
