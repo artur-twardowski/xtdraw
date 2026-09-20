@@ -1,4 +1,4 @@
-#include "colors.h"
+#include "core/colors.h"
 
 namespace xtdraw {
 void SetColor(TerminalIO &terminal_io, const ColorPair &color_pair) {

@@ -6,9 +6,10 @@
 #include <cstddef>
 #include <vector>
 
-#include "ansi_output.h"
-#include "colors.h"
+#include "core/ansi_output.h"
+#include "core/colors.h"
 
+namespace xtdraw {
 class TerminalIO;
 
 /**
@@ -75,5 +76,7 @@ class Board {
     CursorMode             cursor_mode{CursorMode::ENTIRE_CHARACTER};
     std::vector<BoardCell> grid;
 };
+
+}  // namespace xtdraw
 
 #endif  // BOARD_H

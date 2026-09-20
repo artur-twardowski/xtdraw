@@ -9,13 +9,14 @@
 #include <string>
 #include <variant>
 
-#include "types.h"
-#include "ansi_output.h"
+#include "core/ansi_output.h"
+
+namespace xtdraw {
 
 std::string KeyCodeToString(uint32_t keycode, char special_delim_left = '<',
                             char special_delim_right = '>');
 
-class TerminalIO: public xtdraw::ANSIOutput {
+class TerminalIO : public xtdraw::ANSIOutput {
    public:
     explicit TerminalIO(std::ostream &os);
     virtual ~TerminalIO();
@@ -37,5 +38,7 @@ class TerminalIO: public xtdraw::ANSIOutput {
     termios       original_termios{};
     bool          raw_mode_enabled = false;
 };
+
+}  // namespace xtdraw
 
 #endif  // TERMINAL_IO_H

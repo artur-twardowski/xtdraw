@@ -9,19 +9,19 @@ set(XTDRAW_UNIT_TESTS_SOURCES
     src/main.cpp
     src/ansi_sequences.cpp
     src/utf8_encode_decode.cpp
-    ../src/utils.cpp
-    ../src/ansi_sequences.cpp
 )
-
 
 # Create executable
 add_executable(xtdraw_unit_tests ${XTDRAW_UNIT_TESTS_SOURCES})
 
 target_include_directories(xtdraw_unit_tests
-                           PUBLIC ${CMAKE_SOURCE_DIR}/src
-                           PUBLIC ${CMAKE_SOURCE_DIR}/../src
+                           PUBLIC ${CMAKE_SOURCE_DIR}/app/include
+                           PUBLIC ${CMAKE_SOURCE_DIR}/test/include
                        )
 
-target_link_libraries(xtdraw_unit_tests PRIVATE c gtest)
+target_link_libraries(xtdraw_unit_tests
+                      PRIVATE c
+                      PRIVATE gtest
+                      PRIVATE xtdraw_core)
 
 

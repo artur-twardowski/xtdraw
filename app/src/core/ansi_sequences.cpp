@@ -2,8 +2,8 @@
 #include <stdexcept>
 #include <string>
 
-#include "ansi_output.h"
-#include "ansi_sequences.h"
+#include "core/ansi_output.h"
+#include "core/ansi_sequences.h"
 
 namespace xtdraw::ansi {
 

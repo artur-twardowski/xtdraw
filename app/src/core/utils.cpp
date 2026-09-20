@@ -1,8 +1,8 @@
-#include "utils.h"
+#include "core/utils.h"
+#include <stdint.h>
 #include <iostream>
 
 namespace xtdraw {
-
 static constexpr uint8_t ExtractBits(uint32_t in, uint8_t lsb, uint8_t count) {
     const uint32_t mask = ((1 << count) - 1) << lsb;
     return (in & mask) >> lsb;

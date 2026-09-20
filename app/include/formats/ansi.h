@@ -1,9 +1,11 @@
 #ifndef FORMATS_ANSI_H
 #define FORMATS_ANSI_H
-#include <string>
 #include <iostream>
+#include <string>
 
+namespace xtdraw {
 class Board;
+}
 
 namespace xtdraw::format {
 class ANSI {

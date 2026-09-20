@@ -2,8 +2,8 @@
 
 #include <variant>
 
-#include "ansi_output.h"
-#include "ansi_sequences.h"
+#include "core/ansi_output.h"
+#include "core/ansi_sequences.h"
 
 using xtdraw::ansi::Sequence;
 using xtdraw::ansi::SequenceType;

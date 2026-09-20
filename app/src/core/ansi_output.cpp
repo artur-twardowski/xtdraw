@@ -1,5 +1,5 @@
-#include "ansi_output.h"
-#include "utils.h"
+#include "core/ansi_output.h"
+#include "core/utils.h"
 
 namespace xtdraw {
 static constexpr const char ESC = '\033';

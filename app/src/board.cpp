@@ -1,7 +1,9 @@
 #include "board.h"
-#include "charset.h"
-#include "terminal_io.h"
+#include "core/charset.h"
+#include "core/terminal_io.h"
 #include <map>
+
+namespace xtdraw {
 
 Board::Board(const BoxDimensions &viewport, uint16_t width, uint16_t height)
     : window(viewport), width(width), height(height) {
@@ -36,15 +38,15 @@ void Board::SetCellColor(const xtdraw::ColorPair &color) {
 void Board::TogglePixel() {
     auto   &element = grid[cursor_y * width + cursor_x];
     uint8_t bit     = (1 << (cursor_sy * 2 + cursor_sx));
-    const std::map<CursorMode, box_drawing_t> kBoxDrawingModes = {
-        {CursorMode::BLK_2x2, box_drawing_t::BLK_2x2},
-        {CursorMode::BLK_2x3, box_drawing_t::BLK_2x3},
-        {CursorMode::BLK_2x4, box_drawing_t::BLK_2x4_BRAILLE},
+    const std::map<CursorMode, BoxDrawing> kBoxDrawingModes = {
+        {CursorMode::BLK_2x2, BoxDrawing::BLK_2x2},
+        {CursorMode::BLK_2x3, BoxDrawing::BLK_2x3},
+        {CursorMode::BLK_2x4, BoxDrawing::BLK_2x4_BRAILLE},
     };
 
     auto it = kBoxDrawingModes.find(cursor_mode);
     if (it != kBoxDrawingModes.end()) {
-        box_drawing_t box_drawing = it->second;
+        BoxDrawing box_drawing = it->second;
         uint8_t       pix;
         if (CharacterToPixels(pix, box_drawing, element.character)) {
             pix ^= bit;
@@ -136,20 +138,20 @@ void Board::GetCursorPosition(uint16_t &x, uint16_t &y, uint8_t &sx, uint8_t &sy
 
 bool Board::IsTogglingAvailable() const {
     uint8_t       pix;
-    box_drawing_t box_drawing_initial, box_drawing_actual;
+    BoxDrawing box_drawing_initial, box_drawing_actual;
     auto         &element = grid[cursor_y * width + cursor_x];
 
     switch (cursor_mode) {
         case CursorMode::ENTIRE_CHARACTER:
             return true;
         case CursorMode::BLK_2x2:
-            box_drawing_initial = box_drawing_t::BLK_2x2;
+            box_drawing_initial = BoxDrawing::BLK_2x2;
             break;
         case CursorMode::BLK_2x3:
-            box_drawing_initial = box_drawing_t::BLK_2x3;
+            box_drawing_initial = BoxDrawing::BLK_2x3;
             break;
         case CursorMode::BLK_2x4:
-            box_drawing_initial = box_drawing_t::BLK_2x4_BRAILLE;
+            box_drawing_initial = BoxDrawing::BLK_2x4_BRAILLE;
             break;
     }
     box_drawing_actual = box_drawing_initial;
@@ -173,20 +175,20 @@ const BoardCell &Board::GetCellUnderCursor() const { return GetCell(cursor_y, cu
 
 void Board::Render(TerminalIO &terminal_io) {
     const uint32_t kLeftTopCorner = GetBoxDrawingCharacter(
-        {.south = line_weight_t::THIN, .east = line_weight_t::THICK, .attributes = ATTR_ROUNDED_CORNERS});
+        {.south = LineWeight::THIN, .east = LineWeight::THICK, .attributes = ATTR_ROUNDED_CORNERS});
     const uint32_t kRightTopCorner = GetBoxDrawingCharacter(
-        {.south = line_weight_t::THIN, .west = line_weight_t::THICK, .attributes = ATTR_ROUNDED_CORNERS});
+        {.south = LineWeight::THIN, .west = LineWeight::THICK, .attributes = ATTR_ROUNDED_CORNERS});
     const uint32_t kLeftBottomCorner  = 0x2570;
     const uint32_t kRightBottomCorner = 0x256f;
 
     const uint32_t kHorizontalLine = GetBoxDrawingCharacter({
-        .east = line_weight_t::THIN,
-        .west = line_weight_t::THIN,
+        .east = LineWeight::THIN,
+        .west = LineWeight::THIN,
     });
 
     const uint32_t kVerticalLine = GetBoxDrawingCharacter({
-        .north = line_weight_t::THIN,
-        .south = line_weight_t::THIN,
+        .north = LineWeight::THIN,
+        .south = LineWeight::THIN,
     });
 
     const uint8_t border_bg = 16;
@@ -233,19 +235,19 @@ void Board::RenderCursor(TerminalIO &terminal_io, bool show_placeholder) {
             terminal_io.SetColor(cell.foreground_color, cell.background_color);
             terminal_io.Write(cell.character);
         } else {
-            box_drawing_t box_drawing;
+            BoxDrawing box_drawing;
             switch (cursor_mode) {
                 case CursorMode::BLK_2x2:
-                    box_drawing = box_drawing_t::BLK_2x2;
+                    box_drawing = BoxDrawing::BLK_2x2;
                     break;
                 case CursorMode::BLK_2x3:
-                    box_drawing = box_drawing_t::BLK_2x3;
+                    box_drawing = BoxDrawing::BLK_2x3;
                     break;
                 case CursorMode::BLK_2x4:
-                    box_drawing = box_drawing_t::BLK_2x4_BRAILLE;
+                    box_drawing = BoxDrawing::BLK_2x4_BRAILLE;
                     break;
                 default:
-                    box_drawing = box_drawing_t::BLK_2x2;
+                    box_drawing = BoxDrawing::BLK_2x2;
                     break;
             }
             uint8_t pix;
@@ -267,3 +269,5 @@ void Board::RenderCursor(TerminalIO &terminal_io, bool show_placeholder) {
 }
 
 bool Board::IsValidCoord(uint16_t row, uint16_t col) const { return row < height && col < width; }
+
+}

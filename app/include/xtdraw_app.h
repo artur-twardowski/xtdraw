@@ -2,8 +2,8 @@
 #define XTDRAW_APP_H
 
 #include "board.h"
-#include "colors.h"
-#include "terminal_io.h"
+#include "core/colors.h"
+#include "core/terminal_io.h"
 #include <array>
 
 namespace xtdraw {

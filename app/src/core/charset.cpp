@@ -6,8 +6,9 @@
 #include <iostream>
 #include <map>
 
-#include "charset.h"
+#include "core/charset.h"
 
+namespace xtdraw {
 struct SetDescriptor {
     struct Subset {
         uint32_t       first;
@@ -62,7 +63,7 @@ const std::vector<SetDescriptor> kSets = {
      }},
 };
 
-uint32_t GetBoxDrawingCharacter(const box_drawing_spec_t &s) {
+uint32_t GetBoxDrawingCharacter(const BoxDrawingSpec &s) {
     // clang-format off
     static constexpr uint32_t VERTICAL_LINES[] = {
         /* Thin */   0x2502, 0x254e, 0x2506, 0x250a,
@@ -102,13 +103,13 @@ uint32_t GetBoxDrawingCharacter(const box_drawing_spec_t &s) {
     static_assert(N_HORIZONTAL_LINES == 12);
     static_assert(N_CORNERS == 256);
     // Either horizontal or vertical, with the same thickness
-    if (s.north == s.south && s.east == s.west && s.north != line_weight_t::NONE &&
-        s.east == line_weight_t::NONE) {
+    if (s.north == s.south && s.east == s.west && s.north != LineWeight::NONE &&
+        s.east == LineWeight::NONE) {
         size_t index = static_cast<size_t>(s.north) * 4 + (s.attributes & 0x03);
         assert(index < N_VERTICAL_LINES);
         return VERTICAL_LINES[index];
-    } else if (s.north == s.south && s.east == s.west && s.east != line_weight_t::NONE &&
-               s.north == line_weight_t::NONE) {
+    } else if (s.north == s.south && s.east == s.west && s.east != LineWeight::NONE &&
+               s.north == LineWeight::NONE) {
         size_t index = static_cast<size_t>(s.east) * 4 + (s.attributes & 0x03);
         assert(index < N_HORIZONTAL_LINES);
         return HORIZONTAL_LINES[index];
@@ -203,33 +204,33 @@ static const auto BLOCKS_2x2_DEC         = BuildDecodingMap2x2();
 static const auto BLOCKS_2x3_DEC         = BuildDecodingMap2x3();
 static const auto BLOCKS_2x4_BRAILLE_DEC = BuildDecodingMap2x4();
 
-uint32_t GetBlockDrawingCharacter(uint8_t pixels, box_drawing_t set) {
+uint32_t GetBlockDrawingCharacter(uint8_t pixels, BoxDrawing set) {
     switch (set) {
-        case box_drawing_t::BLK_2x2:
+        case BoxDrawing::BLK_2x2:
             return BLOCKS_2x2[pixels & 0x0f];
-        case box_drawing_t::BLK_2x3:
+        case BoxDrawing::BLK_2x3:
             return BLOCKS_2x3[pixels & 0x3f];
-        case box_drawing_t::BLK_2x4_BRAILLE:
+        case BoxDrawing::BLK_2x4_BRAILLE:
             return BLOCKS_2x4_BRAILLE[pixels & 0xff];
         default:
             return 0x20;
     }
 }
 
-bool CharacterToPixels(uint8_t &pixels, box_drawing_t set, uint32_t ch) {
-    if (set == box_drawing_t::BLK_2x2) {
+bool CharacterToPixels(uint8_t &pixels, BoxDrawing set, uint32_t ch) {
+    if (set == BoxDrawing::BLK_2x2) {
         auto it2x2 = BLOCKS_2x2_DEC.find(ch);
         if (it2x2 != BLOCKS_2x2_DEC.end()) {
             pixels = it2x2->second;
             return true;
         }
-    } else if (set == box_drawing_t::BLK_2x3) {
+    } else if (set == BoxDrawing::BLK_2x3) {
         auto it2x3 = BLOCKS_2x3_DEC.find(ch);
         if (it2x3 != BLOCKS_2x3_DEC.end()) {
             pixels = it2x3->second;
             return true;
         }
-    } else if (set == box_drawing_t::BLK_2x4_BRAILLE) {
+    } else if (set == BoxDrawing::BLK_2x4_BRAILLE) {
         auto it2x4 = BLOCKS_2x4_BRAILLE_DEC.find(ch);
         if (it2x4 != BLOCKS_2x4_BRAILLE_DEC.end()) {
             pixels = it2x4->second;
@@ -276,4 +277,6 @@ uint32_t GetCharFromSubset(uint16_t set_index, uint16_t char_index) {
     std::vector<uint32_t> chars;
     PopulateSet(chars, set);
     return chars[char_index];
+}
+
 }

@@ -1,23 +1,20 @@
 #include <unistd.h>
 
+#include <fstream>
 #include <functional>
 #include <iomanip>
 #include <map>
 #include <sstream>
 #include <variant>
-#include <fstream>
 
-#include "colors.h"
-#include "terminal_io.h"
-#include "xtdraw_app.h"
-#include "charset.h"
+#include "core/charset.h"
+#include "core/colors.h"
+#include "core/terminal_io.h"
 #include "formats/ansi.h"
+#include "xtdraw_app.h"
 
 namespace xtdraw {
-App::App() : 
-    terminal_io(std::cout),
-    board({0, 0, 80, 16}, 128, 64)
-{
+App::App() : terminal_io(std::cout), board({0, 0, 80, 16}, 128, 64) {
     for (uint8_t ix = 0; ix < quick_select_chars.size(); ix++) {
         quick_select_chars[ix] = {0, static_cast<uint16_t>('A' + ix)};
     }
@@ -62,10 +59,9 @@ bool App::Run() {
 
 void App::ProcessInput(uint32_t keycode) {
     static const std::map<std::string, size_t> kQuickSelectKeys = {
-        {"1", 0}, {"2", 1}, {"3", 2}, {"4", 3}, {"5", 4},
-        {"6", 5}, {"7", 6}, {"8", 7}, {"9", 8}, {"0", 9},
-        {"!", 10}, {"@", 11}, {"#", 12}, {"$", 13}, {"%", 14},
-        {"^", 15}, {"&", 16}, {"*", 17}, {"(", 18}, {")", 19},
+        {"1", 0},  {"2", 1},  {"3", 2},  {"4", 3},  {"5", 4},  {"6", 5},  {"7", 6},
+        {"8", 7},  {"9", 8},  {"0", 9},  {"!", 10}, {"@", 11}, {"#", 12}, {"$", 13},
+        {"%", 14}, {"^", 15}, {"&", 16}, {"*", 17}, {"(", 18}, {")", 19},
     };
     // Handle special keys and printable characters
     if (!keycode) {
@@ -84,7 +80,7 @@ void App::ProcessInput(uint32_t keycode) {
     };
     auto toggle_character_or_pixel = [&]() {
         if (board.GetCursorMode() == Board::CursorMode::ENTIRE_CHARACTER) {
-            uint32_t current_char = board.GetCellUnderCursor().character;
+            uint32_t current_char  = board.GetCellUnderCursor().character;
             uint32_t selected_char = GetActiveCharacter();
             if (current_char != selected_char) {
                 board.SetCell(selected_char);
@@ -109,22 +105,22 @@ void App::ProcessInput(uint32_t keycode) {
     };
     auto save_board = [&](const std::string &filename) {
         std::ofstream f(filename, std::ios::out);
-        format::ANSI ansi_file(board);
+        format::ANSI  ansi_file(board);
         ansi_file.Write(f);
         f.close();
     };
     auto load_board = [&](const std::string &filename) {
         std::ifstream f(filename, std::ios::in);
-        format::ANSI ansi_file(board);
+        format::ANSI  ansi_file(board);
         ansi_file.Read(f);
         f.close();
         redraw_board = true;
     };
 
-    const std::string seq_str = KeyCodeToString(keycode);
-    const bool dbl_width = IsCharacterSetDoubleWidth(active_set_ix);
-    size_t picker_vertical_step = dbl_width ? 16 : 32;
-    uint8_t picker_mask = dbl_width ? 0x7f : 0xff;
+    const std::string seq_str              = KeyCodeToString(keycode);
+    const bool        dbl_width            = IsCharacterSetDoubleWidth(active_set_ix);
+    size_t            picker_vertical_step = dbl_width ? 16 : 32;
+    uint8_t           picker_mask          = dbl_width ? 0x7f : 0xff;
     if (seq_str == "q" || seq_str == "Q") {
         // Exit the application
         OnTerminationSignal();
@@ -166,10 +162,10 @@ void App::ProcessInput(uint32_t keycode) {
     } else if (seq_str == "<F4>") {
         change_cursor_mode(Board::CursorMode::BLK_2x4);
     } else if (seq_str == "x") {
-        TerminalIO::Color tmp = active_color.background;
+        TerminalIO::Color tmp   = active_color.background;
         active_color.background = active_color.foreground;
         active_color.foreground = tmp;
-        redraw_color_picker = true;
+        redraw_color_picker     = true;
     } else if (seq_str == "w") {
         save_board("default.txt");
     } else if (seq_str == "r") {
@@ -182,7 +178,6 @@ void App::ProcessInput(uint32_t keycode) {
         if (board.GetCursorMode() == Board::CursorMode::ENTIRE_CHARACTER) {
             board.SetCell(GetCharFromSubset(qsc.set_index, qsc.char_index));
         }
-        
     }
     last_char = seq_str;
 }
@@ -226,7 +221,9 @@ void App::RedrawCursorInfo() {
             SetColor(terminal_io, colors.cursor_mode);
             terminal_io.Write(" CHAR");
         } else {
-            SetColor(terminal_io, board.IsTogglingAvailable() ? colors.cursor_mode : colors.cursor_mode_unavail);
+            SetColor(terminal_io, board.IsTogglingAvailable()
+                                      ? colors.cursor_mode
+                                      : colors.cursor_mode_unavail);
             switch (cursor_mode) {
                 case Board::CursorMode::BLK_2x2:
                     terminal_io.Write(" 2x2 ");
@@ -363,11 +360,13 @@ void App::RedrawCharacterPicker(bool active) {
             uint32_t ch = active_set[ix];
 
             if (y * chars_in_row + x == picker_char_ix) {
-                SetColor(terminal_io, (active && ch != '\0') ? colors.char_picker_cursor
-                                             : colors.char_picker_inactive_cursor);
+                SetColor(terminal_io, (active && ch != '\0')
+                                          ? colors.char_picker_cursor
+                                          : colors.char_picker_inactive_cursor);
             } else {
-                SetColor(terminal_io, (active && ch != '\0') ? colors.char_picker_normal
-                                             : colors.char_picker_inactive);
+                SetColor(terminal_io, (active && ch != '\0')
+                                          ? colors.char_picker_normal
+                                          : colors.char_picker_inactive);
             }
             terminal_io.Write((ch >= ' ') ? ch : ' ');
             if (double_width) {
@@ -406,11 +405,11 @@ void App::OnTerminationSignal() {
     app_running = false;
 }
 
-void App::OnResizeSignal() {}
+void     App::OnResizeSignal() {}
 uint32_t App::GetActiveCharacter() const {
     std::vector<uint32_t> active_set;
-    bool _b;
-    std::string _s;
+    bool                  _b;
+    std::string           _s;
     GetCharacterSubset(active_set, _b, _s, active_set_ix);
     return active_set[picker_char_ix];
 }
