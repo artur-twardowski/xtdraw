@@ -40,6 +40,8 @@ class Board {
 
     void SetCell(uint16_t x, uint16_t y, const BoardCell &cell);
 
+    void SetViewport(const BoxDimensions &window) { this->window = window; }
+
     void SetCell(uint32_t character);
     void SetCellColor(const xtdraw::ColorPair &color);
     void TogglePixel();

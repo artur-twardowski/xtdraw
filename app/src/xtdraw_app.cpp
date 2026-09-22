@@ -37,6 +37,7 @@ bool App::Init() {
 
 bool App::Run() {
     static uint32_t draw_frame = 0;
+    terminal_io.RequestTerminalDimensions();
     while (app_running) {
         draw_frame++;
         if (draw_frame == 32) {
@@ -48,13 +49,45 @@ bool App::Run() {
         RedrawColorPicker();
 
         SetColor(terminal_io, colors.cursor_info);
-        terminal_io.SetCursorPosition(83, 19);
+        terminal_io.SetCursorPosition(layout.last_char_col, layout.status_line);
         terminal_io.WriteWindowed(last_char, 20);
 
         ProcessInput(terminal_io.ReadKey());
         usleep(10000);
     }
     return true;
+}
+void App::NotifyTerminalResized(size_t rows, size_t cols) {
+    layout.draw_area_left = 0;
+    layout.draw_area_top = 0;
+    layout.draw_area_height = rows - 5;
+    layout.char_picker_top = 0;
+    if (cols < 64) {
+        layout.char_picker_visible = false;
+        layout.draw_area_width = cols;
+    } else {
+        layout.char_picker_visible = true;
+        layout.draw_area_width = cols - 35;
+        layout.char_picker_left = cols - 33;
+    }
+    layout.status_line = rows;
+    layout.last_char_col = cols - 24;
+    layout.cursor_pos_left = layout.char_picker_left;
+    layout.cursor_pos_top = 16;
+    layout.palette_left = 0;
+    layout.palette_top = rows - 5;
+
+    board.SetViewport({
+        .left = layout.draw_area_left,
+        .top = layout.draw_area_top,
+        .width = layout.draw_area_width,
+        .height = layout.draw_area_height
+    });
+    redraw_board = true;
+    redraw_cursor_info = true;
+    redraw_color_picker = true;
+    terminal_io.SetColor(uint8_t{0}, uint8_t{0});
+    terminal_io.ClearScreen();
 }
 
 void App::ProcessInput(uint32_t keycode) {
@@ -116,6 +149,12 @@ void App::ProcessInput(uint32_t keycode) {
         f.close();
         redraw_board = true;
     };
+
+    if ((keycode >> 28) == 0xd) {
+        size_t rows = (keycode & 0x0fff0000) >> 16;
+        size_t cols = keycode & 0xffff;
+        NotifyTerminalResized(rows, cols);
+    }
 
     const std::string seq_str              = KeyCodeToString(keycode);
     const bool        dbl_width            = IsCharacterSetDoubleWidth(active_set_ix);
@@ -203,7 +242,7 @@ void App::RedrawCursorInfo() {
         uint8_t  csx, csy;
         board.GetCursorPosition(cx, cy, csx, csy);
 
-        terminal_io.SetCursorPosition(83, 15);
+        terminal_io.SetCursorPosition(layout.cursor_pos_left, layout.cursor_pos_top);
         SetColor(terminal_io, colors.cursor_info);
         const auto cursor_mode = board.GetCursorMode();
         if (cursor_mode == Board::CursorMode::ENTIRE_CHARACTER) {
@@ -285,8 +324,10 @@ void App::RedrawColorPicker() {
         }
     };
     if (redraw_color_picker) {
+        const auto &kLeft = layout.palette_left;
+        const auto &kTop = layout.palette_top;
         // ROW 1
-        terminal_io.SetCursorPosition(0, top_row);
+        terminal_io.SetCursorPosition(kLeft, kTop);
         for (uint8_t c = 0; c < 16; c++) {
             SetColor(terminal_io, {uint8_t(c), uint8_t{15}});
             terminal_io.Write(" " + print_mark(c) + " ");
@@ -296,7 +337,7 @@ void App::RedrawColorPicker() {
         SetColor(terminal_io, active_color);
         terminal_io.Write("    ");
 
-        terminal_io.SetCursorPosition(0, top_row + 1);
+        terminal_io.SetCursorPosition(kLeft, kTop + 1);
         for (uint8_t c = 0; c < 24; c++) {
             uint8_t ccode = Xterm256Gray(c);
             SetColor(terminal_io, {ccode, c < 16 ? Xterm256Gray(23) : Xterm256Gray(0)});
@@ -306,7 +347,7 @@ void App::RedrawColorPicker() {
         terminal_io.Write("    ");
         SetColor(terminal_io, active_color);
         terminal_io.Write("-\u2588\u2588-");
-        terminal_io.SetCursorPosition(0, top_row + 2);
+        terminal_io.SetCursorPosition(kLeft, kTop + 2);
 
         for (const char &component : {'R', 'G', 'B'}) {
             SetColor(terminal_io, {uint8_t{0}, Xterm256RGB(component == 'R' ? 5 : 0,
@@ -345,16 +386,19 @@ void App::RedrawColorPicker() {
 }
 
 void App::RedrawCharacterPicker(bool active) {
+    const auto &kLeft = layout.char_picker_left;
+    const auto &kTop = layout.char_picker_top;
+
     std::vector<uint32_t> active_set;
     bool                  double_width;
     std::string           subset_name;
     GetCharacterSubset(active_set, double_width, subset_name, active_set_ix);
-    terminal_io.SetCursorPosition(83, 0);
+    terminal_io.SetCursorPosition(kLeft, kTop);
     SetColor(terminal_io, colors.char_picker_header);
     terminal_io.WriteWindowed(subset_name, 32);
     const size_t chars_in_row = double_width ? 16 : 32;
     for (size_t y = 0; y < 8; y++) {
-        terminal_io.SetCursorPosition(83, y + 1);
+        terminal_io.SetCursorPosition(kLeft, kTop + y + 1);
         for (size_t x = 0; x < chars_in_row; x++) {
             uint32_t ix = y * chars_in_row + x;
             uint32_t ch = active_set[ix];
@@ -374,7 +418,7 @@ void App::RedrawCharacterPicker(bool active) {
             }
         }
     }
-    terminal_io.SetCursorPosition(83 + 22, 9);
+    terminal_io.SetCursorPosition(kLeft + 22, kTop + 9);
     SetColor(terminal_io, colors.char_picker_info);
     std::ostringstream line;
     line << std::hex << std::setw(8) << active_set[picker_char_ix];
@@ -383,7 +427,7 @@ void App::RedrawCharacterPicker(bool active) {
     static const char kKeys[] = {'1', '2', '3', '4', '5', '6', '7', '8', '9', '0'};
 
     for (uint8_t row = 0; row < 3; row++) {
-        terminal_io.SetCursorPosition(84, 11 + row);
+        terminal_io.SetCursorPosition(kLeft + 1, kTop + 11 + row);
         for (uint8_t col = 0; col < 10; col++) {
             terminal_io.Write(' ');
             if (row == 2) {
@@ -405,7 +449,10 @@ void App::OnTerminationSignal() {
     app_running = false;
 }
 
-void     App::OnResizeSignal() {}
+void App::OnResizeSignal() {
+    terminal_io.RequestTerminalDimensions();
+}
+
 uint32_t App::GetActiveCharacter() const {
     std::vector<uint32_t> active_set;
     bool                  _b;

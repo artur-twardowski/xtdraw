@@ -81,6 +81,23 @@ uint32_t TerminalIO::ReadKey() {
     uint32_t result = 0;
     uint8_t  ch;
     ssize_t  bytes_read = read(STDIN_FILENO, &ch, 1);
+    static const uint32_t CSI_SEQUENCE = (0b01 << 30);
+    static const uint32_t SS_SEQUENCE = (0b10<< 30);
+    static const uint32_t SS3_SEQUENCE = 0x80;
+    static const uint32_t OTHER_SEQUENCE = (0b11 << 30);
+    static const uint32_t OVERFLOW_SEQUENCE = OTHER_SEQUENCE | (0b11 << 28);
+    static const uint32_t TERMINAL_SIZE = OTHER_SEQUENCE | (0b01 << 28);
+
+    // Interpretation of result based on most significant bits:
+    // 00...: Unicode character
+    // 01...: CSI sequence (most of special keys on the keyboard)
+    // 10...: SS2/SS3 sequences (some special keys):
+    //     100000ee eeeddddd cccccbbb bbaaaaaa - up to 5 bytes from the sequence
+    // 11...: other:
+    //     1111...: overflow sequence
+    //     1101rrrr rrrrrrrr cccccccc cccccccc - current cursor position/terminal dimensions:
+    //                                           c - number of columns (0..65535)
+    //                                           r - number of rows (0..4095)
 
     if (bytes_read == -1) {
         perror("read");
@@ -99,48 +116,64 @@ uint32_t TerminalIO::ReadKey() {
         if (read(STDIN_FILENO, &next_ch, 1) > 0) {
             // Standard CSI (Control Sequence Introducer) sequences: ESC [
             if (next_ch == '[') {
-                result |= (1 << 30);
+                result |= CSI_SEQUENCE;
                 unsigned char seq_ch;
 
                 // Read parameter bytes and intermediate bytes (0x30-0x3F and 0x20-0x2F)
                 size_t bitshift = 0;
+                std::string complete_sequence;
                 while (read(STDIN_FILENO, &seq_ch, 1) > 0) {
+                    complete_sequence += seq_ch;
                     // Check if this is a final byte (0x40-0x7E)
                     // Common final bytes: A-Z (cursor movement), ~ (function keys), m
                     // (color), etc.
-                    if (bitshift >= 24) {
-                        std::cout << "<too long>";
-                        break;
-                    }
                     if (seq_ch >= 0x20 && seq_ch <= 0x3F) {
                         uint8_t part =
                             seq_ch - 0x20;  // values from 0x00 to 0x1F -> 5 bits needed
-                        result |= (part << bitshift);
-                        bitshift += 5;
+                        if (bitshift <= 24) {
+                            result |= (part << bitshift);
+                            bitshift += 5;
+                        } else {
+                            result = OVERFLOW_SEQUENCE;
+                        }
                     } else if (seq_ch >= 0x40 && seq_ch <= 0x7E) {
                         uint8_t part =
                             seq_ch - 0x40;  // values from 0x00 to 0x3F -> 6 bits needed
-                        result |= (part << bitshift);
-                        bitshift += 6;
+                        if (bitshift <= 24) {
+                            result |= (part << bitshift);
+                            bitshift += 6;
+                        } else {
+                            result = OVERFLOW_SEQUENCE;
+                        }
                         break;
                     }
+                }
+
+                if (complete_sequence.ends_with('R')) {
+                    try {
+                        ssize_t pos1 = complete_sequence.find(';');
+                        ssize_t pos2 = complete_sequence.size() - 1;
+                        uint16_t rows = std::stoi(complete_sequence.substr(0, pos1));
+                        uint16_t cols = std::stoi(complete_sequence.substr(pos1+1,pos2));
+                        result = TERMINAL_SIZE | ((rows & 0xfff) << 16) | (cols & 0xffff);
+                    } catch (...) { /* Leave the original value of result */ }
                 }
             }
             // SS2 sequences: ESC N (single shift, rarely used)
             else if (next_ch == 'N') {
                 unsigned char seq_ch;
                 if (read(STDIN_FILENO, &seq_ch, 1) > 0) {
-                    result = (2 << 30) | (seq_ch);
+                    result = SS_SEQUENCE | (seq_ch);
                 }
             }
             // SS3 sequences: ESC O (used by some terminals for function keys)
             else if (next_ch == 'O') {
                 unsigned char seq_ch;
                 if (read(STDIN_FILENO, &seq_ch, 1) > 0) {
-                    result = (2 << 30) | 0x80 | (seq_ch);
+                    result = SS_SEQUENCE | SS3_SEQUENCE | (seq_ch);
                 }
             } else {
-                result = (3 << 30) | 0x100 | next_ch;
+                result = OTHER_SEQUENCE | 0x100 | next_ch;
             }
         }
     } else if (ch > 0x7F) {
@@ -164,6 +197,12 @@ void TerminalIO::SetCursorPosition(int col, int row) {
 void TerminalIO::ShowCursor() { out_stream << ESC << "[?25h" << std::flush; }
 
 void TerminalIO::HideCursor() { out_stream << ESC << "[?25l" << std::flush; }
+void TerminalIO::RequestCursorPosition() {
+    out_stream << ESC << "[6n" << std::flush;
+}
+void TerminalIO::RequestTerminalDimensions() {
+    out_stream << ESC << "[9999;9999f" << ESC << "[6n" << std::flush;
+}
 
 void TerminalIO::WriteWindowed(const std::string &data, size_t window_size) {
     if (data.size() < window_size) {

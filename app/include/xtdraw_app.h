@@ -1,10 +1,12 @@
 #ifndef XTDRAW_APP_H
 #define XTDRAW_APP_H
 
+#include <array>
+
 #include "board.h"
 #include "core/colors.h"
 #include "core/terminal_io.h"
-#include <array>
+#include "layout.h"
 
 namespace xtdraw {
 class App {
@@ -22,6 +24,7 @@ class App {
     void       RedrawCharacterPicker(bool active);
     uint32_t   GetActiveCharacter() const;
     void       RedrawColorPicker();
+    void       NotifyTerminalResized(size_t rows, size_t cols);
     Colors     colors;
     TerminalIO terminal_io;
     Board      board;
@@ -36,10 +39,11 @@ class App {
         uint16_t char_index{0};
     };
 
-    uint16_t picker_char_ix{0};
-    uint16_t active_set_ix{0};
-    ColorPair active_color{uint8_t{0}, uint8_t{255}};
+    uint16_t    picker_char_ix{0};
+    uint16_t    active_set_ix{0};
+    ColorPair   active_color{uint8_t{0}, uint8_t{255}};
     std::string last_char;
+    Layout      layout;
 
     std::array<QuickSelectCharacter, 20> quick_select_chars;
 };

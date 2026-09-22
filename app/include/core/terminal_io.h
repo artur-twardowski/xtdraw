@@ -31,6 +31,8 @@ class TerminalIO : public xtdraw::ANSIOutput {
     void SetCursorPosition(int col, int row);
     void ShowCursor();
     void HideCursor();
+    void RequestCursorPosition();
+    void RequestTerminalDimensions();
 
    private:
     uint32_t      ReadUTF8(uint8_t first);
