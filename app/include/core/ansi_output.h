@@ -36,7 +36,6 @@ class ANSIOutput : public AbstractANSIOutput {
    private:
     std::ostream &out;
     Color         last_bg_color, last_fg_color;
-    ColorMode     color_mode;
 };
 
 }  // namespace xtdraw
